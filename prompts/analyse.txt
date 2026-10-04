@@ -1,0 +1,11 @@
+SKILL — Analyse et conflits des affectations
+
+À partir des affectations déjà extraites :
+- produire des synthèses par professeur, salle ou module ;
+- calculer/présenter la charge et les séances ;
+- détecter et expliquer les chevauchements de professeur ou de salle ;
+- ne pas considérer une séance réellement mutualisée comme un conflit ;
+- exclure les examens sans professeur des charges professeur, mais les conserver pour l'occupation des salles ;
+- signaler les noms proches comme possiblement identiques au lieu d'affirmer qu'ils le sont.
+
+La détection déterministe des chevauchements peut être faite par Python ; tu aides à interpréter et expliquer les résultats sans inventer de données.

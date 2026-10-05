@@ -5,7 +5,8 @@
 - Lot : L2a, refus conservateur des remplacements distants non atomiques.
 - Branche : `lab/concurrent-backup-guard`.
 - Base examinée : `75534fc639aeaf5725d52b26e38d3b5a711114ce` (PR nº 3).
-- État : vérifié localement sur service simulé ; publication de la branche à terminer.
+- État : vérifié localement sur service simulé et publié dans la PR nº 4.
+- PR : https://github.com/ridouanalhannachi/extracteur_agents_lab/pull/4
 - Dépendances : PR nº 1, nº 2 et nº 3 non fusionnées au début du travail.
 
 ## Preuves et limites
@@ -27,8 +28,8 @@ donnée personnelle ou workflow de déploiement n'a été trouvé ; Drive est d�
 
 ## Reprise
 
-Publier la branche et ouvrir la PR L2a sans la confondre avec une validation Drive
-réelle. Ne pas refaire L1. Après livraison de L2a, examiner la restauration
+Ne pas confondre la PR avec une validation Drive réelle. Ne pas refaire L1. Traiter
+les dépendances des PR une par une ; après livraison de L2a, examiner la restauration
 conservatrice L3 sur données fictives.
 Les créations distantes simultanées et la réautorisation d'un remplacement sûr
 restent hors de L2a. Aucun nouveau service ni technologie n'est requis pour ce lot.

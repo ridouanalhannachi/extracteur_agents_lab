@@ -47,7 +47,11 @@ Validation du responsable : `python -m unittest tests.test_drive_concurrency -v`
 Vérification indépendante : mêmes 11 et 37 tests réussis, `git diff --check` réussi,
 aucun secret ni donnée personnelle détecté et aucun workflow de déploiement présent.
 
+Publication : PR nº 4, branche `lab/concurrent-backup-guard`, commit distant
+`94156137db9e03302c1786fc09783f939e983f6f` au premier envoi.
+
 Limites : aucune validation OAuth/API Drive réelle ; deux premières créations
 simultanées peuvent encore produire des fichiers homonymes. L'interface d'envoi
 forcé devra être adaptée avant toute activation réelle, car la garde bloque désormais
-tout remplacement. Prochaine étape : publier L2a, puis diagnostiquer L3 séparément.
+tout remplacement. Prochaine étape : traiter la chaîne de dépendances des PR sans
+fusion en masse, puis diagnostiquer L3 séparément.

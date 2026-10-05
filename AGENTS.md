@@ -46,6 +46,7 @@ sinon appliquer les rôles successivement et le dire.
 
 | Rôle | Mission et entrées | Livrable et critère de réussite | Outils et limites |
 |---|---|---|---|
+| Pilote | Lire les résultats, PR et besoins ; classer les objectifs par bénéfice, coût et risque | Au plus cinq objectifs actifs dans docs/OBJECTIFS_PILOTE.md, un lot sélectionné avec critère mesurable et missions distribuées | Lecture, planification et coordination du laboratoire ; pas de fusion, déploiement ou extension des accès |
 | Architecte | Examiner le code courant et reproduire le défaut choisi | Diagnostic, périmètre et critères observables transmis au développeur | Lecture du laboratoire, tests fictifs ; aucune modification de données réelles |
 | Développeur | Appliquer le diagnostic sur une branche dédiée | Diff minimal et commandes de test transmis au vérificateur | Python, SQLite temporaire, Git du laboratoire ; aucune fusion ni mise en production |
 | Vérificateur | Relire le diff et vérifier les comportements attendus | Résultats reproductibles, régressions et limites explicites | Tests locaux, services simulés ; ne pas annoncer une validation réelle de Drive |
@@ -65,3 +66,13 @@ ou un besoin de données réelles est remonté à l'utilisateur, jamais contourn
 - Tester les défauts réellement corrigés et la conservation des données. Une syntaxe
   valide ne suffit pas à prouver le fonctionnement de l'application.
 - Les tests simulés ne prouvent ni l'accès OAuth ni la sauvegarde réelle sur Drive.
+
+## Pilotage des améliorations
+
+À chaque cycle, confier le pilotage à un sous-agent si disponible. Il réévalue les
+objectifs sur preuves, reprend les PR existantes et attribue des fichiers distincts.
+Il peut proposer et faire réaliser des améliorations simples et réversibles du
+périmètre EDT/RH autorisé. Maximum cinq objectifs actifs et un lot développé par cycle.
+Les évolutions majeures, coûts, données réelles, fusions et déploiements restent soumis
+à accord explicite. Voir docs/OBJECTIFS_PILOTE.md. Les agents ne restent pas actifs
+entre les cycles et ne créent pas d’autre tâche planifiée.

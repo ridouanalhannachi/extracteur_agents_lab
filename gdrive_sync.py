@@ -318,9 +318,28 @@ def connection_info() -> Dict:
     return info
 
 
+class RemoteOverwriteBlocked(RuntimeError):
+    """An existing remote database cannot safely be replaced by this client."""
+
+    def __init__(self, remote: Dict):
+        self.remote = remote
+        super().__init__(
+            "Conflit de sauvegarde : mémoire locale conservée. "
+            "Remplacement de la base Google Drive bloqué en l'absence de "
+            "protection atomique contre les écritures concurrentes."
+        )
+
+
 def upload_database(create_remote_backup: bool = True) -> Dict:
+    """Create the first remote database; never overwrite an existing database.
+
+    ``create_remote_backup`` remains accepted for existing callers but cannot
+    bypass the guard. A preceding read/copy does not protect a later update
+    against another client. Concurrent first creations can still produce
+    duplicate files; this is not an atomic create-if-absent implementation.
+    """
     service = _service()
-    folder_id, backup_folder_id = ensure_drive_structure(service)
+    folder_id, _ = ensure_drive_structure(service)
     _ensure_dirs()
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -330,25 +349,16 @@ def upload_database(create_remote_backup: bool = True) -> Dict:
         local_md5 = _md5_file(snapshot)
 
         remote = _drive_db(service, folder_id)
-        if remote and create_remote_backup:
-            # Conserver la version locale précédente de Drive dans le dossier backups.
-            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = f"estn_drive_before_upload_{stamp}.db"
-            copy_body = {"name": backup_name, "parents": [backup_folder_id]}
-            service.files().copy(fileId=remote["id"], body=copy_body, fields="id").execute()
+        if remote:
+            # Refuse before copy/update and before recording any sync success.
+            raise RemoteOverwriteBlocked(remote)
 
         media = MediaFileUpload(str(snapshot), mimetype="application/x-sqlite3", resumable=False)
-        if remote:
-            result = service.files().update(
-                fileId=remote["id"], media_body=media,
-                fields="id,name,modifiedTime,md5Checksum,size"
-            ).execute()
-        else:
-            result = service.files().create(
-                body={"name": DRIVE_DB_NAME, "parents": [folder_id]},
-                media_body=media,
-                fields="id,name,modifiedTime,md5Checksum,size",
-            ).execute()
+        result = service.files().create(
+            body={"name": DRIVE_DB_NAME, "parents": [folder_id]},
+            media_body=media,
+            fields="id,name,modifiedTime,md5Checksum,size",
+        ).execute()
 
     state = _load_state()
     state.update({
@@ -359,6 +369,15 @@ def upload_database(create_remote_backup: bool = True) -> Dict:
     })
     _save_state(state)
     return result
+
+
+def _sync_upload(create_remote_backup: bool = True) -> Dict:
+    """Adapt a blocked upload to the conflict result understood by the UI."""
+    try:
+        result = upload_database(create_remote_backup=create_remote_backup)
+    except RemoteOverwriteBlocked as exc:
+        return {"status": "conflict", "message": str(exc), "remote": exc.remote}
+    return {"status": "uploaded", "message": "Première base envoyée vers Google Drive.", "remote": result}
 
 
 def download_database(create_local_backup: bool = True) -> Dict:
@@ -404,8 +423,8 @@ def sync_database() -> Dict:
 
     - Drive absent : upload de la base locale.
     - Local identique au dernier sync et Drive modifié : download.
-    - Drive identique au dernier sync et local modifié : upload.
-    - Les deux ont changé : renvoie 'conflict' et laisse l'utilisateur choisir.
+    - Drive identique au dernier sync et local modifié : remplacement bloqué.
+    - Les deux ont changé : renvoie 'conflict' sans écriture distante.
     """
     service = _service()
     folder_id, _ = ensure_drive_structure(service)
@@ -419,8 +438,7 @@ def sync_database() -> Dict:
             DB_PATH.parent.mkdir(parents=True, exist_ok=True)
             with sqlite3.connect(DB_PATH):
                 pass
-        result = upload_database(create_remote_backup=False)
-        return {"status": "uploaded", "message": "Première base envoyée vers Google Drive.", "remote": result}
+        return _sync_upload(create_remote_backup=False)
 
     remote_md5 = remote.get("md5Checksum")
     if local_md5 == remote_md5 and local_md5 is not None:
@@ -448,8 +466,7 @@ def sync_database() -> Dict:
             result = download_database()
             return {"status": "downloaded", "message": "Version Google Drive téléchargée.", "remote": result}
         if local_changed and not remote_changed:
-            result = upload_database()
-            return {"status": "uploaded", "message": "Version locale envoyée vers Google Drive.", "remote": result}
+            return _sync_upload()
 
     # Première synchronisation sur cet appareil : ne jamais écraser silencieusement.
     return {

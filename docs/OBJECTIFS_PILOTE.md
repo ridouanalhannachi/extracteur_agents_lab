@@ -41,16 +41,36 @@ simulés. Ne touche pas au dépôt d'origine, aux données réelles ou aux secre
 n'ajoute aucun service payant ni appel IA externe sans autorisation. Maintiens
 Drive désactivé. Une validation simulée ne prouve pas une sauvegarde réelle.
 
-## Trois prochains objectifs proposés
+## Objectifs actifs — cycle du 2026-10-05
 
-Les coûts ci-dessous sont relatifs et devront être affinés après diagnostic.
-Tous les objectifs suivants sont **à examiner**, pas réalisés.
+Référence examinée : `75534fc639aeaf5725d52b26e38d3b5a711114ce` (PR nº 3).
+Le responsable a revérifié les PR ouvertes nº 1, nº 2 et nº 3 ; aucun L2 distant.
+L1 est déjà livré dans la PR nº 2 : il ne sera pas redéveloppé.
+Les coûts sont relatifs ; une hypothèse ci-dessous ne constitue pas un défaut prouvé.
 
-| Priorité / objectif | Impact | Coût estimé / risque | Dépendances | Critères mesurables et preuves attendues |
-|---|---|---|---|---|
-| 1 — L2 : prévenir le remplacement d'une sauvegarde devenue obsolète | Très élevé : éviter la perte des corrections d'un autre client | Moyen à élevé ; risque élevé si le contrôle est seulement suivi d'un envoi non atomique | Reprendre la branche pertinente après examen des PR nº 1 et nº 2 ; confirmer le chemin d'envoi actuel et les garanties réellement disponibles | Sur deux clients simulés, un changement distant entre lecture et écriture provoque zéro remplacement et un état de conflit visible. Tester aussi l'échec de lecture de la révision distante. Si l'atomicité n'est pas disponible, bloquer le remplacement automatique et documenter la limite ; ne pas revendiquer une protection atomique. |
-| 2 — L3 : préserver la mémoire locale pendant une restauration défaillante | Très élevé : récupérer sans perdre la dernière base utilisable | Moyen ; risque élevé lors du remplacement du fichier local | Diagnostic de la restauration et inventaire des mécanismes locaux de sauvegarde ; tenir compte du protocole retenu pour L2 | Un téléchargement interrompu, une base corrompue et une base distante plus ancienne laissent les séances, versions et validations locales identiques aux valeurs initiales. Vérifier l'intégrité SQLite, l'absence de remplacement silencieux et une nouvelle tentative contrôlée. |
-| 3 — L4 : rendre le statut d'une correction compréhensible | Élevé : éviter qu'une personne quitte en croyant ses données sauvegardées | Moyen ; risque modéré de régression de l'état Streamlit | Résultats L1 et états d'erreur définis par L2/L3 ; parcours de test fictif reproductible | Parcourir modification non enregistrée, succès local, échec distant simulé, nouvelle tentative et réouverture. À chaque étape, l'interface affiche l'état attendu ; aucun succès distant sur erreur. Vérifier que la correction locale demeure après échec distant. Distinguer test automatisé simulé et validation navigateur réellement exécutée. |
+| Priorité / objectif | Problème observé ou hypothèse | Bénéfice utilisateur | Coût / risque | Dépendances | Critère mesurable et état |
+|---|---|---|---|---|---|
+| 1 — L2a : interdire le remplacement distant sans garantie atomique | Observé dans le code : `auto_upload_after_change` appelait `upload_database(False)` ; l'envoi remplaçait le fichier existant sans précondition. Le contrôle MD5 de `sync_database` ne rendait pas cet envoi atomique. | Préserver les corrections d'un autre client et annoncer clairement le refus de synchronisation. | Moyen / réduction volontaire des envois : même un fichier inchangé reste protégé tant qu'une écriture conditionnelle fiable n'est pas établie. | Base des PR nº 1–3 ; Drive désactivé ; service simulé et SQLite temporaire. | **Vérifié sur simulation.** 11 tests ciblés et 37 tests au total réussis ; zéro remplacement, marqueurs intacts, erreur de lecture sans écriture et aucun faux succès. Créations initiales simultanées et adaptation de l'UI avant activation réelle restent hors lot. |
+| 2 — L3 : préserver la mémoire locale pendant une restauration défaillante | Hypothèse à vérifier : les interruptions, bases invalides ou anciennes peuvent menacer la copie locale ; le code valide déjà SQLite avant remplacement, mais ne compare pas l'ancienneté métier. | Récupérer sans perdre les dernières corrections utilisables. | Moyen / élevé lors du remplacement local. | Garde L2a ; diagnostic de `download_database` et sauvegardes locales. | **Proposé.** Simuler interruption, corruption et base distante ancienne ; comparer séances, versions et validations locales, intégrité SQLite et nouvelle tentative. Découper le lot après diagnostic. |
+| 3 — L4 : rendre le statut d'une correction compréhensible | Hypothèse à vérifier : un parcours complet peut confondre enregistrement local et réussite distante ; les tests existants couvrent déjà plusieurs erreurs simulées. | Savoir si une correction est enregistrée et où elle se trouve. | Moyen / modéré, état Streamlit. | Résultats L1, L2a et restauration L3. | **Proposé.** Parcourir non enregistré, succès local, échec distant, nouvelle tentative et réouverture ; aucun faux succès distant, correction locale conservée. Distinguer simulations et validation navigateur. |
+
+## Lot retenu et attribution
+
+Un seul lot : **L2a**, branche `lab/concurrent-backup-guard`.
+Sans garantie atomique établie, la stratégie est de refuser le remplacement d'un
+fichier existant, y compris lorsqu'un simple contrôle le juge inchangé. Ce lot
+n'implémente ni fusion de bases ni protocole multi-client complet. La création
+simultanée de plusieurs fichiers de même nom et la reprise d'envois autorisés
+restent des limites à examiner séparément ; le refus n'est pas un faux succès.
+
+- Développeur : `gdrive_sync.py` et `tests/test_drive_concurrency.py` ; reproduire
+  le risque sur service fictif, développer la garde et ses régressions.
+- Vérificateur indépendant : lecture du diff et exécution de contrôles ; aucun
+  fichier du développeur modifié simultanément.
+- Pilote : uniquement `docs/OBJECTIFS_PILOTE.md` et `docs/BACKLOG_LAB.md` ; ajuster
+  le statut après réception des preuves du développeur et du vérificateur.
+- Responsable : journal, contrôles globaux et proposition en brouillon ; aucune
+  fusion, modification de `main`, ni déploiement.
 
 ## Génération des objectifs suivants
 

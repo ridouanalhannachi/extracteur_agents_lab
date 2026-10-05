@@ -30,3 +30,28 @@ de redémarrage réel Streamlit Cloud. Une base conservée sur disque ne démont
 la persistance d'un hébergement dont le disque est éphémère.
 Prochaine étape : L2, diagnostic des remplacements distants concurrents, uniquement
 sur service simulé et en maintenant Drive désactivé dans le laboratoire.
+
+## 2026-10-05 — L2a, garde conservatrice des remplacements distants
+
+Base examinée : `75534fc639aeaf5725d52b26e38d3b5a711114ce` (PR nº 3).
+Branche : `lab/concurrent-backup-guard`. Diagnostic confirmé : un envoi pouvait
+appeler `files.update` sans précondition atomique et effacer une correction distante.
+
+Le correctif refuse tout remplacement d'une base distante existante, convertit le
+refus en état `conflict` pour la synchronisation et empêche l'envoi automatique
+d'annoncer un succès. La première création reste autorisée. Drive demeure désactivé
+dans `app_config.py`; les données sont fictives et le service Drive est simulé.
+
+Validation du responsable : `python -m unittest tests.test_drive_concurrency -v`
+— 11 tests réussis ; `python -m unittest discover -s tests -q` — 37 tests réussis.
+Vérification indépendante : mêmes 11 et 37 tests réussis, `git diff --check` réussi,
+aucun secret ni donnée personnelle détecté et aucun workflow de déploiement présent.
+
+Publication : PR nº 4, branche `lab/concurrent-backup-guard`, commit distant
+`94156137db9e03302c1786fc09783f939e983f6f` au premier envoi.
+
+Limites : aucune validation OAuth/API Drive réelle ; deux premières créations
+simultanées peuvent encore produire des fichiers homonymes. L'interface d'envoi
+forcé devra être adaptée avant toute activation réelle, car la garde bloque désormais
+tout remplacement. Prochaine étape : traiter la chaîne de dépendances des PR sans
+fusion en masse, puis diagnostiquer L3 séparément.

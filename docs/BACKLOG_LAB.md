@@ -17,14 +17,17 @@ sur le commit examiné ; ne pas les réimplémenter sans défaut reproduit.
 |---|---|---|---|
 | L0 — Isolation | Vérifié localement le 2026-10-04 | Le lancement du laboratoire ne lit ni ne remplace les données de production | Configuration séparée, aucune base réelle ni secret livré, tests des chemins locaux et du blocage des appels distants en mode local |
 | L1 — Mémoire après redémarrage | Validé sur données fictives le 2026-10-04 | Une correction et sa vérification restent consultables après réouverture de la base | Base fictive : créer emploi et versions, corriger, fermer et rouvrir ; comparer séances, historique et vérifications ; migration relancée sans perte |
-| L2 — Sauvegarde distante concurrente | À examiner | Détecter qu'une sauvegarde distante a changé avant tout remplacement et rendre le conflit visible | Reproduction sur service simulé avec deux clients ; aucune donnée distante remplacée en cas de conflit ; reprise explicitement contrôlée |
+| L2a — Garde conservatrice des remplacements distants | Vérifié sur service simulé le 2026-10-05 | Refuser le remplacement d’un fichier existant sans garantie atomique et rendre le refus explicite | 11 tests ciblés et 37 tests au total réussis : zéro remplacement, état local conservé et aucun faux succès ; Drive réel non testé et désactivé |
 | L3 — Restauration conservatrice | À examiner | Un échec de téléchargement ou une base invalide laisse la mémoire locale intacte | Simuler interruption et base corrompue, vérifier intégrité locale et possibilité de nouvelle tentative ; examiner le comportement face à une base distante plus ancienne |
 | L4 — Parcours de correction | À examiner | La personne distingue modification non enregistrée, sauvegarde locale et état distant | Parcours sur données fictives : correction, enregistrement, échec simulé, nouvelle tentative, réouverture ; aucun message trompeur de réussite |
 
-L2 correspond à un risque identifié lors de la revue précédente : l'envoi automatique
-peut remplacer le fichier distant sans contrôle de concurrence. Confirmer le mécanisme
-dans le code actuel avant de choisir une correction. Une simple vérification suivie
-d'un envoi n'est pas une garantie atomique : documenter les limites restantes.
+Le diagnostic L2 sur `75534fc` confirme que `upload_database` remplace le fichier
+existant sans précondition ; `auto_upload_after_change` l'appelle directement.
+L2a borne ce cycle au refus conservateur de ce remplacement : un contrôle puis un
+envoi ne prouve pas l'atomicité. Branche : `lab/concurrent-backup-guard`.
+Drive reste désactivé. L2 n'est pas déclaré entièrement résolu : autoriser à nouveau
+un remplacement sûr et traiter des créations initiales simultanées demanderaient
+un protocole supplémentaire, à diagnostiquer séparément. Voir OBJECTIFS_PILOTE.md.
 
 Chaque lot doit être redécoupé s'il ne tient pas dans un cycle raisonnable. Un lot
 déjà traité ou une proposition ouverte prend priorité sur un nouveau développement.

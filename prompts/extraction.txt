@@ -1,0 +1,12 @@
+SKILL — Extraction des affectations
+
+Objectif : produire une ligne par séance avec Jour, Horaire, Module/Matière, Type, Professeur, Salle et le contexte Filière, Niveau/Semestre, Groupe, Année universitaire et Source.
+
+Règles :
+- Ne jamais inventer un professeur, une salle ou une matière.
+- Ignorer les cases vides ou « — », sauf les examens sans professeur qui restent valides avec Professeur = « — ».
+- « Cours/TD » est un type à part entière.
+- Une case comportant plusieurs groupes/séances doit produire plusieurs lignes.
+- Les noms, accents et majuscules doivent être conservés.
+- Horaire au format HHhMM–HHhMM.
+- Signaler toute valeur absente ou incertaine.

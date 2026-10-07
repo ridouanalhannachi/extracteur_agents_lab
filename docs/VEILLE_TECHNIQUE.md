@@ -20,3 +20,16 @@ mise en forme légère ; aucun service, coût ou appel IA supplémentaire propos
 Le bénéfice reste à vérifier sur les parcours réels : accueil compréhensible,
 accès à chaque module existant et conservation des importations, corrections et
 exports. La comparaison visuelle dépend de la possibilité de lancer l'interface.
+
+## 2026-10-07 — D2, tableaux et filtres
+
+Aucune nouvelle technologie n'est justifiée pour rendre les tableaux et filtres
+plus lisibles. Les composants Streamlit déjà présents (`st.dataframe`, champs de
+recherche et sélections multiples) couvrent le lot sans augmenter le temps
+d'installation, la mémoire utilisée ni la maintenance sur les PC modestes. Une
+grille JavaScript ou une bibliothèque de thème ajouterait une dépendance et une
+surface de sécurité sans bénéfice mesuré à ce stade. Le retour arrière reste un
+simple retrait des ajustements d'interface. Critère d'acceptation : filtres
+compréhensibles, résultat vide explicite et colonnes essentielles lisibles, sans
+régression des exports. Aucun workflow de déploiement n'est présent dans le dépôt
+et `DRIVE_ENABLED` demeure fixé à `False` dans le laboratoire.

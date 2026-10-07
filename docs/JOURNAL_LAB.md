@@ -102,3 +102,33 @@ texte/blanc 16,27:1 ; ce calcul ne remplace pas l'inspection du rendu réel.
 
 Acceptation finale indépendante après correction : 39 tests réussis (5,493 s),
 réserve isolation levée et `git diff --check` réussi. Aucun défaut bloquant trouvé.
+
+## 2026-10-07 — D2a, catalogue et filtres de l'historique
+
+Base distante : `58ac343581be8638bf8ab454937819bb3d4b11c9`, PR nº 5
+fusionnée et aucune PR ouverte au démarrage. Branche :
+`lab/design-table-filters`. Lot limité au catalogue initial de l'Historique.
+
+Diagnostic confirmé : quatre filtres sur une seule rangée, titre non contextuel,
+aucun décompte ni réinitialisation, et tableau vide affiché avant l'avertissement.
+Changements : filtres sur deux rangées, compteur résultat/total, titre contextuel,
+bouton de réinitialisation, état vide avant tableau. Les identifiants, lignes et
+règles de filtrage sont conservés. Trois usages `width="stretch"` de cet écran ont
+été remplacés par l'option Streamlit compatible `use_container_width=True` après
+reproduction d'erreurs sous Streamlit 1.45.1. Aucune requête SQL ni donnée modifiée.
+
+Validation : quatre tests ciblés réussis, dont AppTest sur SQLite temporaire (`2/2`,
+filtre `1/2`, combinaison vide et réinitialisation `2/2`). Suite complète :
+`/tmp/edt-d2a-venv/bin/python -m unittest discover -s tests -q` — 43 tests réussis
+en 10,028 s sur l'arbre final. `git diff --check` réussi. Drive reste désactivé ; aucun workflow de
+déploiement suivi et aucune nouvelle dépendance du projet.
+
+Organisation : le Pilote a borné le lot et l'Éclaireur a conclu qu'aucune nouvelle
+technologie n'était justifiée. Le développeur délégué a été bloqué par une limite
+d'usage avant modification ; le responsable a développé et relu successivement.
+La vérification est donc non indépendante pour ce lot. Aucun contournement ou autre
+agent n'a été lancé en boucle.
+
+Limites : AppTest ne valide ni rendu visuel réel, ni petit écran, ni navigation au
+clavier. Aucune capture avant/après disponible. Publication et fusion restent à
+effectuer via PR après contrôle exact du distant ; aucun déploiement.

@@ -1,13 +1,13 @@
 # Agent Pilote — objectifs EDT/RH
 
-## Cadre et état examiné — 2026-10-06
+## Cadre et état examiné — 2026-10-07
 
 Dépôt exclusif : `ridouanalhannachi/extracteur_agents_lab`.
-Base : `38bc8f839c8af5fbd59c401348aac7ea87bab676`. Le responsable a vérifié
-le distant : PR nº 1 à 4 fusionnées, aucune PR ouverte au début du cycle.
-Les anciens lots L0/L1/L2a sont intégrés ; les 37 tests consignés au journal sont
-les preuves historiques, pas une exécution nouvelle. Les travaux des anciennes
-copies locales sont préservés ; aucun de ces fichiers n'est repris ni écrasé ici.
+Base : `58ac343` (`main`, fusion de la PR nº 5). Le responsable a vérifié le
+distant : PR nº 1 à 5 fusionnées, aucune PR ouverte au début du cycle. D1 est
+donc intégré ; ses 39 tests consignés au journal sont des preuves historiques,
+pas une exécution nouvelle. Les travaux des anciennes copies locales sont
+préservés ; aucun de ces fichiers n'est repris ni écrasé ici.
 
 La priorité explicite du 6 octobre est le design et l'ergonomie. Elle remplace
 L3 pour le choix du lot après préservation des travaux inachevés. Pas de migration,
@@ -21,8 +21,8 @@ mentions demandant un nouvel accord pour chaque fusion. Aucun push direct sur ma
 
 | Priorité / objectif | Problème observé ou hypothèse | Bénéfice utilisateur | Coût / risque | Dépendances | Critère mesurable | État |
 |---|---|---|---|---|---|---|
-| 1 — D1 : accueil et navigation | Observé dans `app.py` : aucune page d'accueil dédiée ; premier écran centré extraction/Excel, alors que sept modules existent ; navigation et options d'import partagent la barre latérale. | Comprendre l'application et trouver immédiatement les fonctions existantes. | Faible à moyen / modéré : routage et état des widgets Streamlit à préserver. | Base intégrée ; composants Streamlit existants ; aucune dépendance ajoutée. | Accueil identifiable ; accès natifs menant aux modules existants ; libellés cohérents ; Drive explicitement désactivé ; aucun compteur fictif ; suite applicative et contrôles des routes réussis. Comparaison visuelle seulement si lancement possible. | Vérifié par AppTest et suite applicative ; rendu visuel non vérifié |
-| 2 — D2 : lisibilité des tableaux et filtres | Hypothèse à vérifier : densité et intitulés techniques compliquent lecture et sélection ; plusieurs écrans utilisent des tableaux distincts. | Comparer les séances et trouver les informations utiles plus vite. | Moyen / modéré : éviter de modifier données, tris métier ou exports. | Diagnostic des écrans après D1. | Sur données fictives, filtres identifiables, colonnes essentielles lisibles, mêmes lignes et totaux avant/après ; contrôle clavier et écran étroit. | Proposé |
+| 1 — D2a : catalogue de l'historique | Observé dans `edt_history_ui.py` : quatre filtres sont alignés sur une seule rangée, le titre du tableau reste « Tous les emplois » après filtrage, et aucun décompte visible ni action de réinitialisation n'aide à comprendre le résultat. | Retrouver un emploi mémorisé plus vite et savoir immédiatement si un filtre est actif. | Faible / faible à modéré : préserver exactement la sélection des emplois, versions et données affichées. | D1 intégré ; composants Streamlit natifs ; données fictives. | Sur une fixture d'au moins deux emplois : état initial `2/2`, un filtre donne le même sous-ensemble métier attendu (`1/2`), la réinitialisation revient à `2/2`, et le cas sans résultat reste explicite ; suite complète réussie. Le rendu étroit/clavier n'est déclaré validé qu'avec un navigateur réel. | Vérifié localement : 43 tests réussis, dont parcours AppTest ; revue indépendante indisponible |
+| 2 — D1 : accueil et navigation | L'absence d'accueil et la perte visuelle des options d'import ont été corrigées dans la PR nº 5. | Comprendre l'application et trouver immédiatement les fonctions existantes. | Faible / résiduel : inspection navigateur non faite. | Intégré à `main` au commit `58ac343`. | 39 tests, dont deux AppTest ; six accès réels, retour accueil, OCR conservé et Drive désactivé. | Intégré et vérifié ; rendu visuel/mobile non vérifié |
 | 3 — D3 : parcours import, correction et validation | Observé : import dans la barre latérale puis quatre onglets et actions dispersées ; difficulté réelle à confirmer par un parcours complet. | Savoir quoi importer, vérifier et enregistrer avant export. | Moyen / modéré : widgets d'édition et persistance. | D1 ; tests de conservation L1. | Un document fictif parcourt import → correction → validation → export ; correction conservée après réouverture ; libellés des étapes et erreurs explicites. | Proposé |
 | 4 — D4 : états vides et sauvegardes explicites | Hypothèse : cohérence des messages entre écrans à vérifier ; L2a interdit déjà les remplacements distants. | Distinguer absence de données, erreur et enregistrement local confirmé. | Moyen / modéré : ne pas annoncer une réussite non établie. | D1 ; garde L2a ; Drive désactivé. | Parcours vide, correction non enregistrée, succès local et échec simulé documentés ; aucun faux succès distant ; mémoire intacte. | Proposé |
 | 5 — L3 : restauration conservatrice | Hypothèse conservée : une base distante valide mais ancienne peut menacer les corrections locales ; aucun nouveau défaut reproduit dans ce cycle. | Restaurer sans perdre les dernières corrections. | Moyen / élevé : remplacement de base. | Diagnostic séparé ; SQLite temporaire et Drive simulé uniquement. | Simulations d'interruption, corruption et ancienneté ; comparer séances, versions, validations et intégrité locale. | Proposé, différé après priorités design |
@@ -34,24 +34,31 @@ futures séparées, pas des fonctionnalités livrées par ce cycle.
 
 ## Lot retenu et fichiers attribués
 
-Un seul lot : **D1**, branche `lab/design-home-navigation`.
-Diagnostic confirmé par lecture : l'application entre directement sur le module
-EDT, le titre décrit surtout l'export Excel et aucune entrée Accueil n'existe.
-La difficulté d'usage est une hypothèse UX, pas le résultat d'une étude utilisateur.
+Un seul lot : **D2a — catalogue de l'historique**, branche
+`lab/design-table-filters`. Le périmètre est volontairement limité au premier
+tableau de `render_edt_history()` et à ses quatre filtres. Les tableaux de
+statistiques, RH, séances, versions et changements restent hors lot.
 
-- Développeur : interface d'accueil/navigation et ses contrôles ciblés, fichiers
-  attribués par le responsable ; préserver extraction, corrections et exports.
+Diagnostic confirmé par lecture : les quatre filtres sont présentés sur une seule
+ligne ; le tableau filtré conserve le titre « Tous les emplois mémorisés » ; aucun
+décompte résultat/total ni commande de réinitialisation n'est présent. Une gêne
+réelle sur petit écran reste une hypothèse tant qu'un navigateur n'a pas permis de
+la constater.
+
+- Développeur : `edt_history_ui.py` et un test UI ciblé attribué par le
+  responsable ; améliorer la hiérarchie des filtres et du catalogue sans changer
+  requêtes SQL, règles de filtrage, choix d'emploi, versions ni exports.
 - Pilote : uniquement `docs/OBJECTIFS_PILOTE.md` et `docs/BACKLOG_LAB.md`.
 - Vérificateur indépendant : lecture du diff exact et exécution des contrôles ;
   ne modifie pas les fichiers du développeur.
 - Éclaireur : diagnostic d'un besoin technique concret ; aucune nouvelle
-  dépendance justifiée par le diagnostic d'accueil/navigation.
+  dépendance n'est a priori nécessaire pour les composants Streamlit natifs.
 - Responsable : journal, relais, intégration des preuves, publication et fusion
   conditionnelle par PR ; aucune modification directe de main ni déploiement.
 
 ## Reprise
 
-Après preuve du développeur et du vérificateur, actualiser l'état D1 et inscrire
-les commandes, résultats et limites dans le journal et le relais. Une validation
-AppTest seule ne vaut pas une comparaison visuelle navigateur. Ne sélectionner
-D2 ou D3 qu'au cycle suivant, après vérification des branches et PR courantes.
+D2a a été vérifié localement sur données fictives. La délégation de développement
+a rencontré une limite d'usage ; le responsable a repris le code puis effectué une
+revue successive non indépendante. Une validation AppTest ne vaut pas une comparaison
+visuelle navigateur. Publier via PR seulement après nouvelle vérification distante.

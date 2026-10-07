@@ -1,22 +1,21 @@
 # Backlog du laboratoire EDT/RH
 
-## État et priorité — 2026-10-06
+## État et priorité — 2026-10-07
 
-Base distante examinée par le responsable :
-`38bc8f839c8af5fbd59c401348aac7ea87bab676`.
-PR nº 1 à 4 fusionnées, aucune PR ouverte au début du cycle. Le laboratoire est
+Base distante examinée par le responsable : `58ac343`, fusion de la PR nº 5.
+PR nº 1 à 5 fusionnées, aucune PR ouverte au début du cycle. Le laboratoire est
 séparé de l'application d'origine ; aucun déploiement n'est demandé.
 
 La priorité utilisateur du 6 octobre est une amélioration visible du design.
-Les travaux locaux antérieurs sont préservés. Le lot D1 commence sur une branche
-propre ; les anciens lots intégrés ne sont pas redéveloppés.
+Les travaux locaux antérieurs sont préservés. D1 est intégré ; le lot D2a commence
+sur une branche propre et ne reprend aucun ancien lot.
 
 ## Lots actifs
 
 | Lot | État | Résultat attendu | Validation nécessaire |
 |---|---|---|---|
-| D1 — Accueil et navigation | Vérifié : 39 tests, dont 2 AppTest ; rendu navigateur à vérifier | Accueil clair, accès aux fonctions existantes, hiérarchie et styles cohérents ; Drive identifié comme désactivé | Contrôler accès aux modules, absence de fonctions ou statistiques fictives, état des parcours préservé et suite applicative réussie ; comparaison visuelle si lancement réellement possible |
-| D2 — Tableaux et filtres | Proposé, diagnostic à conduire | Lecture et sélection facilitées sans changement des données ni exports | Données fictives ; filtres, colonnes, clavier et petit écran ; mêmes résultats métier |
+| D1 — Accueil et navigation | Intégré via PR nº 5 à `58ac343` ; 39 tests historiques, dont 2 AppTest ; rendu navigateur à vérifier | Accueil clair, accès aux fonctions existantes, hiérarchie et styles cohérents ; Drive identifié comme désactivé | Contrôler ultérieurement comparaison visuelle, focus et petit écran avec un vrai navigateur |
+| D2a — Catalogue et filtres de l'historique | Vérifié localement : 43 tests ; publication à effectuer | Filtres en deux rangées, décompte résultat/total, titre contextuel, réinitialisation et état vide explicite | AppTest : `2/2`, filtre `1/2`, réinitialisation `2/2`, cas vide ; mêmes identifiants métier ; revue successive non indépendante |
 | D3 — Import/correction/validation | Proposé | Étapes et actions compréhensibles, corrections conservées | Import fictif → correction → validation → export → réouverture, sans perte |
 | D4 — États vides et sauvegardes | Proposé | Absence de données, erreur et succès local clairement distingués | Parcours vide et erreurs simulées ; aucune réussite distante inventée |
 | L3 — Restauration conservatrice | Proposé, différé après priorités design | Une restauration invalide, interrompue ou ancienne préserve la mémoire locale | Diagnostic sur SQLite temporaire et Drive simulé ; séances, versions, validations et intégrité comparées |
@@ -24,6 +23,14 @@ propre ; les anciens lots intégrés ne sont pas redéveloppés.
 Les cinq objectifs détaillés et les critères transversaux d'accessibilité sont dans
 `docs/OBJECTIFS_PILOTE.md`. Un seul lot développé par cycle. Les états évoluent
 uniquement sur preuves consignées ; « en cours » ne signifie ni testé ni publié.
+
+### Périmètre D2a de ce cycle
+
+Uniquement le catalogue initial de `render_edt_history()` et ses quatre filtres.
+Les autres tableaux de l'historique, les statistiques, la base RH, les éditeurs de
+séances et les exports sont hors lot. Aucun changement de requête SQL, de règle de
+filtrage, de donnée persistée ou de dépendance. AppTest peut prouver les parcours et
+les sous-ensembles ; il ne prouve pas à lui seul le rendu clavier/mobile.
 
 ## Socle intégré à préserver
 

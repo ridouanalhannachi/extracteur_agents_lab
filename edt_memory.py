@@ -444,6 +444,87 @@ def get_version_id(timetable_id, version_number, db_path=DB_PATH):
         ).fetchone()
     return int(row[0]) if row else None
 
+
+def activate_timetable_version(timetable_id, version_id, db_path=DB_PATH):
+    """Make an existing timetable version active without changing its contents.
+
+    The ownership check and both flag updates share one immediate transaction so
+    another writer cannot move the active version between those operations.
+    Business-specific statuses are preserved: only the generic ``Active`` and
+    ``Archivée`` values follow the active flag.
+    """
+    ensure_edt_memory_db(db_path)
+    try:
+        timetable_id = int(timetable_id)
+        version_id = int(version_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("L'emploi du temps et la version doivent être identifiés.") from exc
+
+    with sqlite3.connect(db_path) as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        target = conn.execute(
+            "SELECT version_number, is_active FROM edt_versions "
+            "WHERE id=? AND timetable_id=?",
+            (version_id, timetable_id),
+        ).fetchone()
+        if target is None:
+            raise ValueError(
+                "Version introuvable ou rattachée à un autre emploi du temps."
+            )
+
+        version_number, is_active = int(target[0]), bool(target[1])
+        if is_active:
+            return {
+                "status": "already_active",
+                "timetable_id": timetable_id,
+                "version_id": version_id,
+                "version_number": version_number,
+                "previous_version_id": version_id,
+                "previous_version_number": version_number,
+                "message": f"V{version_number} est déjà la version active.",
+            }
+
+        previous = conn.execute(
+            "SELECT id, version_number FROM edt_versions "
+            "WHERE timetable_id=? AND is_active=1 "
+            "ORDER BY version_number DESC LIMIT 1",
+            (timetable_id,),
+        ).fetchone()
+        conn.execute(
+            "UPDATE edt_versions "
+            "SET is_active=0, "
+            "status=CASE WHEN status='Active' THEN 'Archivée' ELSE status END "
+            "WHERE timetable_id=? AND is_active=1",
+            (timetable_id,),
+        )
+        conn.execute(
+            "UPDATE edt_versions "
+            "SET is_active=1, "
+            "status=CASE WHEN status='Archivée' THEN 'Active' ELSE status END "
+            "WHERE id=? AND timetable_id=?",
+            (version_id, timetable_id),
+        )
+        conn.commit()
+
+    previous_version_id = int(previous[0]) if previous else None
+    previous_version_number = int(previous[1]) if previous else None
+    previous_label = (
+        f"V{previous_version_number}" if previous_version_number is not None
+        else "aucune version"
+    )
+    return {
+        "status": "activated",
+        "timetable_id": timetable_id,
+        "version_id": version_id,
+        "version_number": version_number,
+        "previous_version_id": previous_version_id,
+        "previous_version_number": previous_version_number,
+        "message": (
+            f"V{version_number} est maintenant active "
+            f"(précédemment : {previous_label})."
+        ),
+    }
+
 def load_version_sessions(version_id, db_path=DB_PATH):
     ensure_edt_memory_db(db_path)
     with sqlite3.connect(db_path) as conn:

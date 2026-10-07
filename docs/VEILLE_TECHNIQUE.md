@@ -63,3 +63,11 @@ composants Streamlit, `session_state`, `hashlib` et pandas déjà présents suff
 Aucun formulaire tiers, grille JavaScript ou nouvelle dépendance n'est justifié :
 ils alourdiraient l'installation sur PC modeste sans bénéfice mesuré. Le retour
 arrière reste limité au helper local et aux boutons de l'éditeur.
+
+## 7 octobre 2026 — I3
+
+Le besoin est une transition d'état locale, atomique et explicitement confirmée.
+Les primitives existantes `sqlite3` (`BEGIN IMMEDIATE`), `st.session_state`, case à
+cocher et bouton Streamlit suffisent. Une bibliothèque de machine à états ou un
+composant de dialogue ajouterait installation et maintenance sans gain démontré sur
+PC modeste. Le retour arrière est le retrait du contrôle et du helper transactionnel.

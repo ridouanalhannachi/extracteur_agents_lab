@@ -221,3 +221,24 @@ assistant et enregistrement et qu'appliquer/annuler ne modifie pas la base.
 Limites : AppTest injecte le DataFrame car son API ne permet pas de saisir dans
 `st.data_editor` ; pas de capture navigateur, validation mobile/clavier ou geste
 réel. Aucune nouvelle dépendance. Drive désactivé. Aucun déploiement.
+
+## 2026-10-07 — I3, activation contextuelle d'une version
+
+Base distante `03425a1` (PR nº 9 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/version-actions`. Diagnostic confirmé : l'Historique gardait la
+sélection, mais aucune action ne permettait de réactiver une version archivée.
+
+Changement local : bandeau de version sélectionnée, confirmation obligatoire et
+bouton d'activation désactivé avant accord. Le helper SQLite sérialise l'action,
+valide l'appartenance, archive l'ancienne active et active la cible. L'appel répété
+est sans effet ; versions, séances, commentaires et statuts métier sont préservés.
+
+Preuve responsable : `/tmp/edt-i3-venv/bin/python -m pytest -q` — 62 tests et
+15 sous-tests réussis en 18,80 s. AppTest couvre le parcours et la relance ; cinq
+tests SQLite couvrent activation, idempotence, refus sans mutation et intégrité.
+`git diff --check` réussi avant documentation. Revue indépendante acceptée : 10
+tests ciblés, 62 tests complets en 14,629 s, rollback sur panne injectée et
+`git diff --check` réussis ; aucun défaut bloquant.
+
+Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
+Aucune dépendance projet ajoutée ; Drive reste désactivé ; aucun déploiement.

@@ -9,6 +9,30 @@ import streamlit as st
 from app_config import DB_PATH
 
 
+HISTORY_FILTERS = (
+    ("Année universitaire", "history_year"),
+    ("Période", "history_period"),
+    ("Filière", "history_filiere"),
+    ("Semestre", "history_semester"),
+)
+
+
+def _filter_history_catalog(memory, selections):
+    """Return the catalog rows matching the four visible history filters."""
+    filtered = memory.copy()
+    for column, _key in HISTORY_FILTERS:
+        selected = selections.get(column, "Tous")
+        if selected != "Tous":
+            filtered = filtered[filtered[column].astype(str) == str(selected)]
+    return filtered
+
+
+def _reset_history_filters(state=None):
+    target = st.session_state if state is None else state
+    for _column, key in HISTORY_FILTERS:
+        target[key] = "Tous"
+
+
 def _table_exists(conn, name):
     row = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
@@ -300,7 +324,7 @@ def _render_change_block(version_id, version_number):
         part = changes[changes["Changement"] == label]
         if not part.empty:
             st.markdown(f"**{title}**")
-            st.dataframe(part, width="stretch", hide_index=True)
+            st.dataframe(part, use_container_width=True, hide_index=True)
 
 
 def _render_version(version):
@@ -337,7 +361,7 @@ def _render_version(version):
     if sessions.empty:
         st.warning("Aucune séance enregistrée pour cette version.")
     else:
-        st.dataframe(sessions, width="stretch", hide_index=True)
+        st.dataframe(sessions, use_container_width=True, hide_index=True)
 
     _render_change_block(version_id, version_number)
 
@@ -379,8 +403,6 @@ def render_edt_history():
 
     st.markdown("### 🔎 Filtres")
 
-    f1, f2, f3, f4 = st.columns(4)
-
     def options(column):
         values = sorted(
             {
@@ -391,28 +413,38 @@ def render_edt_history():
         )
         return ["Tous"] + values
 
-    selected_year = f1.selectbox("Année universitaire", options("Année universitaire"), key="history_year")
-    selected_period = f2.selectbox("Période", options("Période"), key="history_period")
-    selected_filiere = f3.selectbox("Filière", options("Filière"), key="history_filiere")
-    selected_semester = f4.selectbox("Semestre", options("Semestre"), key="history_semester")
+    first_row = st.columns(2)
+    second_row = st.columns(2)
+    filter_columns = (*first_row, *second_row)
+    selections = {}
+    for container, (column, key) in zip(filter_columns, HISTORY_FILTERS):
+        selections[column] = container.selectbox(column, options(column), key=key)
 
-    filtered = memory.copy()
+    filters_active = any(value != "Tous" for value in selections.values())
+    actions, result_status = st.columns([1, 2])
+    actions.button(
+        "Réinitialiser les filtres",
+        key="history_reset_filters",
+        disabled=not filters_active,
+        on_click=_reset_history_filters,
+        use_container_width=True,
+    )
 
-    for column, selected in [
-        ("Année universitaire", selected_year),
-        ("Période", selected_period),
-        ("Filière", selected_filiere),
-        ("Semestre", selected_semester),
-    ]:
-        if selected != "Tous":
-            filtered = filtered[filtered[column].astype(str) == selected]
+    filtered = _filter_history_catalog(memory, selections)
+    result_status.caption(f"**{len(filtered)} résultat(s) sur {len(memory)} emploi(s)**")
 
-    st.markdown("### 📚 Tous les emplois mémorisés")
-    st.dataframe(filtered.drop(columns=["id"]), width="stretch", hide_index=True)
+    title = "### 📚 Emplois correspondant aux filtres" if filters_active else "### 📚 Tous les emplois mémorisés"
+    st.markdown(title)
 
     if filtered.empty:
-        st.warning("Aucun emploi ne correspond aux filtres.")
+        st.warning("Aucun emploi ne correspond aux filtres. Élargissez la sélection ou réinitialisez les filtres.")
         return
+
+    st.dataframe(
+        filtered.drop(columns=["id"]),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     labels = {}
     for _, row in filtered.iterrows():
@@ -461,7 +493,7 @@ def render_edt_history():
             if st.button(
                 label,
                 key=f"history_version_button_{timetable_id}_{version_number}",
-                width="stretch",
+                use_container_width=True,
             ):
                 st.session_state[session_key] = int(version["id"])
 

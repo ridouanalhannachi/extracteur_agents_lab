@@ -196,3 +196,28 @@ Drive désactivé. Aucun workflow suivi ; script de déploiement manuel non exé
 absence de déploiement automatique externe déjà confirmée par l'utilisateur.
 Publication/fusion par PR à effectuer, avec revérification SHA et arbre exact.
 Prochaine priorité : diagnostic correction/annulation et maintien des saisies.
+
+## 2026-10-07 — I2, brouillon interactif appliquer/annuler
+
+Base distante `c0c10d2` (PR nº 8 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/interactive-correction`. Le Pilote a confirmé que l'éditeur était
+consommé immédiatement sans appliquer/annuler ni checkpoint durable.
+
+Changement local : brouillon de travail lié à l'empreinte des imports, conservé
+pendant navigation ; checkpoint explicite « Appliquer » utilisé par export,
+assistant et mémoire ; « Annuler » restaure le dernier appliqué. Un nouvel import
+réinitialise le brouillon avec message. Appliquer/annuler n'appelle aucune écriture
+SQLite/Drive. Le test D3b a été adapté à l'étape d'application explicite.
+
+Preuve responsable : `/tmp/edt-i2-venv/bin/python -m unittest discover -s tests
+-q` — 56 tests réussis en 10,272 s. Le nouveau AppTest utilise des fichiers et une
+base fictifs ; il couvre modification, navigation, application, annulation,
+ajout/suppression, nouvel import et invariance des versions. `git diff --check` à
+effectuer après documentation. Revue indépendante acceptée : 7 tests ciblés en
+3,265 s, 56 tests complets en 9,614 s et `git diff --check` réussis. Aucun défaut
+bloquant ; le vérificateur confirme que seul le brouillon appliqué alimente export,
+assistant et enregistrement et qu'appliquer/annuler ne modifie pas la base.
+
+Limites : AppTest injecte le DataFrame car son API ne permet pas de saisir dans
+`st.data_editor` ; pas de capture navigateur, validation mobile/clavier ou geste
+réel. Aucune nouvelle dépendance. Drive désactivé. Aucun déploiement.

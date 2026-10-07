@@ -5,6 +5,16 @@ import io
 from edt_changes import changes_dataframe
 from ui_navigation import HOME, render_navigation, render_home
 from edt_save_state import saved_state, render_saved_state
+from edt_correction_state import (
+    APPLIED_KEY,
+    FLASH_KEY,
+    apply_editor_result,
+    cancel_editor_changes,
+    frame_fingerprint,
+    prepare_editor,
+    remember_editor_result,
+    upload_fingerprint,
+)
 
 from app_config import APP_MODE, IS_CLOUD, IS_STREAMLIT_CLOUD
 from auth_gate import require_login
@@ -319,19 +329,59 @@ with correction_tab:
                "Corrigez ou supprimez les séances inexactes, et ajoutez celles qui manquent. "
                "Pour une nouvelle ligne, renseignez aussi Jour, Filière, Niveau, Source PDF et Durée. "
                "Si vous modifiez un horaire, corrigez aussi sa durée en heures.")
-    edited_details = st.data_editor(build_details_dataframe(all_sessions),
+    baseline_details = build_details_dataframe(all_sessions)
+    editor_seed, source_changed = prepare_editor(
+        baseline_details, upload_fingerprint(timetable_files), st.session_state
+    )
+    if source_changed:
+        st.info("Les documents importés ont changé : le brouillon de correction a été réinitialisé.")
+    edited_details = st.data_editor(editor_seed,
                                     use_container_width=True, hide_index=True,
                                     num_rows="dynamic", key="details_editor")
+    remember_editor_result(edited_details, st.session_state)
+    applied_details = st.session_state[APPLIED_KEY].copy()
+    has_pending_changes = (
+        frame_fingerprint(edited_details) != frame_fingerprint(applied_details)
+    )
+    apply_column, cancel_column = st.columns(2)
+    apply_column.button(
+        "✅ Appliquer les corrections",
+        key="edt_details_apply",
+        type="primary",
+        disabled=not has_pending_changes,
+        use_container_width=True,
+        help="Applique le brouillon à l’export, à l’assistant et à l’enregistrement. Ne crée pas encore de version.",
+        on_click=apply_editor_result,
+        args=(st.session_state, edited_details.copy()),
+    )
+    cancel_column.button(
+        "↩️ Annuler les modifications en cours",
+        key="edt_details_reset",
+        disabled=not has_pending_changes,
+        use_container_width=True,
+        help="Revient au dernier brouillon appliqué. Les versions enregistrées ne sont jamais modifiées.",
+        on_click=cancel_editor_changes,
+        args=(st.session_state,),
+    )
+    flash = st.session_state.pop(FLASH_KEY, None)
+    if flash == "applied":
+        st.success("Corrections appliquées au brouillon local. L’export, l’assistant et l’enregistrement utilisent maintenant ces valeurs.")
+    elif flash == "cancelled":
+        st.info("Modifications en cours annulées. Le dernier brouillon appliqué est restauré.")
+    if has_pending_changes:
+        st.warning("Modifications en cours non appliquées. Elles sont conservées pendant la navigation, mais l’export et l’enregistrement utilisent encore le dernier brouillon appliqué.")
+    else:
+        st.caption("Brouillon appliqué localement. Enregistrez une version pour le conserver après fermeture de l’application.")
     correction_save_status = st.empty()
     st.caption("L’état concerne les séances de l’emploi sélectionné dans « Enregistrer / Versions ». "
                "Vérifiez chaque emploi séparément. La provenance Source PDF / Page n’est pas comparée.")
 
 intervenants = build_intervenants_dataframe(
-    edited_details.fillna("").to_dict("records"))
-incomplete = (edited_details.reindex(columns=["Jour", "Matière", "Nom et prénom", "Horaire",
+    applied_details.fillna("").to_dict("records"))
+incomplete = (applied_details.reindex(columns=["Jour", "Matière", "Nom et prénom", "Horaire",
                                               "Durée", "Filière", "Niveau"])
               .fillna("").astype(str).apply(lambda col: col.str.strip() == "").any(axis=1))
-details = edited_details
+details = applied_details
 
 with export_tab:
     st.subheader("Vérifier la complétude et exporter")

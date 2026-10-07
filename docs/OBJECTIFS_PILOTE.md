@@ -1,28 +1,27 @@
 # Objectifs EDT/RH — 7 octobre 2026
 
-Base distante vérifiée : `67df619`, PR 1 à 7 intégrées, aucune PR ouverte au
-commencement. Priorité : interactions utiles et retour exact après action.
-Un lot par cycle ; uniquement le laboratoire, Drive désactivé, aucun déploiement.
+Base distante vérifiée : `c0c10d2`, fusion de la PR nº 8. Aucune PR ouverte au
+démarrage. Priorité : interactions utiles et retours exacts. Drive désactivé,
+aucun déploiement, un seul lot par cycle.
 
 | Objectif | Problème observé / hypothèse | Bénéfice | Priorité, coût / risque | Dépendances | Critère mesurable | État |
 |---|---|---|---|---|---|---|
-| D3b — État des séances enregistrées | Observé : auto-save avant éditeur, succès manuel transitoire | Savoir si les séances affichées existent sur disque | 1, moyen / modéré | D3a, SQLite, hash canonique existant | Modification → non enregistré ; sauvegarde → Vn ; réexécution conserve état ; erreur sans faux succès ; ancienne version signalée archivée | Vérifié : 55 tests, revue indépendante acceptée |
-| I2 — Correction et annulation | Hypothèse : retour arrière difficile, à diagnostiquer | Corriger sans perdre les saisies | 2, moyen / modéré | D3b | Parcours correction/annulation testable sans perte ; diagnostic préalable | Proposé |
-| I3 — Actions contextuelles versions | Hypothèse : actions dispersées dans historique | Agir sur la version sélectionnée | 3, moyen / modéré | D3b | Sélection stable et confirmation exacte ; aucune activation implicite | Proposé |
-| D5 — Petit écran et clavier | Limite observée : pas de validation navigateur | Actions accessibles à 360 px et au clavier | 4, moyen / faible | Navigateur utilisable | Focus logique, actions visibles, contraste texte 4,5:1 | Proposé |
-| L3 — Restauration conservatrice | Hypothèse : restauration ancienne menace corrections | Conserver mémoire locale | 5, moyen / élevé | Diagnostic SQLite temporaire, Drive simulé | Ancienneté/corruption/interruption sans perte | Différé |
+| I2 — Brouillon de correction contrôlé | Observé : éditeur sans appliquer/annuler ; persistance implicite du widget | Corriger, naviguer et revenir en arrière sans perte | 1, moyen / modéré | D3b/PR8, session Streamlit | Saisie conservée ; appliquer alimente export/mémoire ; annuler restaure dernier appliqué ; nouvel import isolé ; aucune écriture DB | Vérifié : 56 tests, revue indépendante acceptée |
+| I3 — Actions contextuelles versions | Hypothèse : actions dispersées dans historique | Agir sur la version sélectionnée | 2, moyen / modéré | I2 | Sélection stable et confirmation exacte ; aucune activation implicite | Proposé |
+| D5 — Petit écran et clavier | Limite observée : pas de navigateur disponible | Actions accessibles à 360 px et au clavier | 3, moyen / faible | Navigateur utilisable | Focus logique, actions visibles, contraste texte 4,5:1 | Bloqué pour validation visuelle |
+| L3 — Restauration conservatrice | Hypothèse : restauration ancienne menace corrections | Conserver mémoire locale | 4, moyen / élevé | Diagnostic SQLite temporaire, Drive simulé | Ancienneté/corruption/interruption sans perte | Différé |
 
-D1/PR5, D2a/PR6 et D3a/PR7 sont intégrés : ne pas les refaire.
+D1/PR5, D2a/PR6, D3a/PR7 et D3b/PR8 sont intégrés : ne pas les refaire.
 
-## Lot D3b et attribution
+## Lot I2 et attribution
 
-Branche `lab/design-save-state`. Responsable : `app.py`, `edt_save_state.py`,
-`tests/test_save_state.py`, documents de relais. Pilote et vérificateur indépendant :
-lecture seule, diagnostic puis revue/tests. Veille exercée par le Pilote : pas de
-nouvelle technologie justifiée.
+Branche `lab/interactive-correction`. Responsable : `app.py`, helper de brouillon,
+adaptation du test D3b et documents. Développeur délégué : nouveau test AppTest
+uniquement. Pilote/Éclaireur et vérificateur : lecture seule.
 
-Le statut porte seulement sur les séances de la cible sélectionnée dans l'onglet
-Enregistrer / Versions, selon année/période/filière/semestre. Il compare les données
-SQLite, pas un drapeau session. Les autres emplois, les éditions Intervenants
-(export seul) et la provenance Source PDF/Page ne sont pas couverts par ce statut.
-Les opérations métier, clés des widgets, extraction et export restent identiques.
+Le brouillon de travail est lié à l'empreinte nom/contenu/ordre des fichiers. Une
+correction déclenche un état « non appliqué » conservé pendant la navigation.
+« Appliquer » remplace le checkpoint local consommé par export, assistant et
+enregistrement ; « Annuler » revient à ce checkpoint. Ces deux actions ne créent
+aucune version et ne touchent ni SQLite ni Drive. Un nouvel import réinitialise
+explicitement les deux brouillons. Aucun composant ni dépendance n'est ajouté.

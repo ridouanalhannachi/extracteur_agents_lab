@@ -55,3 +55,11 @@ examiné le hash canonique existant, SQLite et les messages Streamlit : aucune
 nouvelle technologie ni dépendance ne se justifie. Comparer les séances stockées
 en lecture seule évite de confondre un succès UI transitoire avec une sauvegarde.
 Aucun gain de performance mesuré ou nouveauté externe revendiqué.
+
+## 7 octobre 2026 — I2
+
+Le défaut relève de l'état d'interface : brouillon, checkpoint et annulation. Les
+composants Streamlit, `session_state`, `hashlib` et pandas déjà présents suffisent.
+Aucun formulaire tiers, grille JavaScript ou nouvelle dépendance n'est justifié :
+ils alourdiraient l'installation sur PC modeste sans bénéfice mesuré. Le retour
+arrière reste limité au helper local et aux boutons de l'éditeur.

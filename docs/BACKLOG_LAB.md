@@ -1,36 +1,35 @@
 # Backlog EDT/RH — 7 octobre 2026
 
-Base vérifiée : `67df619`, PR 1 à 7 fusionnées, aucune ouverte au début du lot.
-La priorité utilisateur est l'interactivité. Le socle L1/L2a et les lots design
-D1/D2a/D3a sont intégrés ; leurs tests passés ne sont pas des tests de ce cycle.
+Base vérifiée : `c0c10d2`, PR 1 à 8 fusionnées, aucune PR ouverte au début du
+cycle. Le socle de fiabilité et D1/D2a/D3a/D3b sont intégrés.
 
-## Lot en cours : D3b — État des séances enregistrées
+## Lot en cours : I2 — Brouillon de correction contrôlé
 
-Diagnostic : l'import automatique précède l'éditeur détaillé, tandis que la
-confirmation manuelle disparaît à la réexécution. L'utilisateur ne sait pas si
-ses corrections correspondent à une version locale.
+Diagnostic confirmé : `details_editor` alimentait immédiatement les étapes
+suivantes, sans action explicite appliquer/annuler ni checkpoint indépendant de
+l'état interne du widget Streamlit.
 
-Livrable : messages réactifs dans Correction, Export et Enregistrement pour
-l'emploi et la cible explicitement sélectionnés. Distinguer non enregistré,
-version locale active, ancienne version archivée, cible incomplète, aucune séance
-et état non vérifiable. Télécharger Excel ne remplace pas l'enregistrement.
+Livrable développé : brouillon de travail conservé lors des reruns et changements
+de module ; boutons « Appliquer les corrections » et « Annuler les modifications
+en cours » ; messages distincts pour modifications en cours, corrections appliquées
+localement et version réellement enregistrée. Export, assistant et mémoire utilisent
+uniquement le dernier brouillon appliqué. Changer les fichiers importés réinitialise
+le brouillon avec un message explicite.
 
-Critères : édition/ajout/suppression détectés ; sauvegarde puis réexécution et
-réouverture conserve correction ; export contient correction ; erreur n'affiche
-pas de faux succès ; contexte année/période/filière/semestre respecté ; aucune
-écriture par la comparaison ; anciennes versions non réactivées implicitement.
+Critères : modification/ajout/suppression persistent pendant navigation ; appliquer
+change le checkpoint sans écrire en base ; annuler restaure le dernier appliqué ;
+nouvel import ne réutilise aucune saisie ; l'enregistrement reste l'unique création
+manuelle de version ; tests D3b toujours réussis.
 
-État : vérifié : 6 tests ciblés, 55 tests complets, revue indépendante acceptée. Voir JOURNAL_LAB et
-REPRISE_AGENTS pour les preuves finales. Comparaison visuelle, mobile et clavier
-non validés en l'absence de navigateur local.
+État : 56 tests réussis par le responsable et par le vérificateur indépendant. Pas de
+capture navigateur, validation tactile/mobile ou geste réel dans la grille : AppTest
+injecte le DataFrame équivalent à une édition.
 
-## Suite (maximum cinq objectifs actifs avec D3b)
+## Suite
 
-1. I2 : diagnostiquer correction/annulation sans perte des saisies.
-2. I3 : diagnostiquer actions contextuelles et maintien de sélection des versions.
-3. D5 : vérifier petit écran, clavier, contraste dans un navigateur réel.
-4. L3 : restauration conservatrice, différée après besoins interactifs.
+1. I3 : diagnostiquer les actions contextuelles sur les versions.
+2. D5 : vérifier petit écran, clavier et contraste dans un navigateur réel.
+3. L3 : restauration conservatrice, différée après les besoins interactifs.
 
-Aucune nouvelle dépendance, migration, donnée réelle ou secret. Drive reste
-désactivé. Publication en branche et fusion via PR selon autorisation existante ;
-pas de push direct main, aucun déploiement, dépôt d'origine exclu.
+Aucune nouvelle dépendance, donnée réelle ou secret. Drive reste désactivé. Pas de
+push direct sur `main`, aucun déploiement, dépôt d'origine exclu.

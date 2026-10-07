@@ -135,6 +135,10 @@ class SaveStateTests(unittest.TestCase):
             at.session_state['test_room'] = 'B2'
             at.run()
             assert not at.exception, at.exception
+            assert any('Modifications en cours non appliquées' in x.value for x in at.warning)
+            assert sum('Séances enregistrées localement : V1' in x.value for x in at.success) == 3
+            at.button(key='edt_details_apply').click().run()
+            assert not at.exception, at.exception
             assert sum('non enregistrées pour cet emploi' in x.value for x in at.warning) == 3
             at.button(key='edt_mem_save').click().run()
             assert not at.exception, at.exception
@@ -142,6 +146,8 @@ class SaveStateTests(unittest.TestCase):
             at.run()
             assert sum('Séances enregistrées localement : V2' in x.value for x in at.success) == 3
             at.session_state['test_room'] = 'C3'
+            at.run()
+            at.button(key='edt_details_apply').click().run()
             at.session_state['test_fail'] = True
             at.button(key='edt_mem_save').click().run()
             assert not at.exception, at.exception
@@ -149,6 +155,7 @@ class SaveStateTests(unittest.TestCase):
             assert sum('non enregistrées pour cet emploi' in x.value for x in at.warning) == 3
             at.session_state['test_room'] = 'A1'
             at.run()
+            at.button(key='edt_details_apply').click().run()
             assert sum('V1 (archivée, non active)' in x.value for x in at.info) == 3
         ''')
         result = subprocess.run([sys.executable, '-c', script], cwd=root,

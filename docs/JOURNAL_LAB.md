@@ -55,3 +55,50 @@ simultanées peuvent encore produire des fichiers homonymes. L'interface d'envoi
 forcé devra être adaptée avant toute activation réelle, car la garde bloque désormais
 tout remplacement. Prochaine étape : traiter la chaîne de dépendances des PR sans
 fusion en masse, puis diagnostiquer L3 séparément.
+
+## 2026-10-07 — D1, accueil et navigation (reprise du 6 octobre)
+
+Base distante revérifiée : `38bc8f839c8af5fbd59c401348aac7ea87bab676`, aucune
+PR ouverte. Les PR 1–4 sont intégrées ; leurs anciens relais ne décrivent plus
+l'état distant. Les copies de travail anciennes sont conservées sans modification.
+Branche : `lab/design-home-navigation`. Un seul lot, design prioritaire.
+
+Diagnostic confirmé : entrée directe sur extraction, aucun accueil ; widgets
+import/OCR supprimés du rendu lors d'un changement de module. Ajout d'un accueil
+avec six accès natifs aux fonctions existantes, navigation unifiée avec retour
+Accueil, cartes bordées et thème clair bleu à typographie native. Options d'import
+regroupées dans un panneau repliable rendu avant le routage. Aucun compteur fictif,
+aucune nouvelle dépendance et aucun changement des moteurs métier.
+
+Pilote : objectifs/backlog ; développeur puis responsable : UI ; Éclaireur : veille
+sans adoption ; vérificateur indépendant : lecture et tests, sans écriture.
+Fichiers : app.py, ui_navigation.py, .streamlit/config.toml,
+tests/test_navigation.py et cinq documents de suivi.
+
+Preuves responsable : `/tmp/edt-ui-venv/bin/python -m unittest discover -s tests -q`
+— 39 tests réussis (37 existants + 2 tests Streamlit réels). AppTest vérifie les six
+raccourcis, retour accueil, état OCR entre modules et écran Drive désactivé.
+`git diff --check` réussi. Serveur Streamlit lancé localement sur 127.0.0.1:8512.
+L'ancien environnement échouait dans PyArrow ; un environnement temporaire séparé
+avec Streamlit 1.45.1 fonctionne, sans modification des dépendances du dépôt.
+
+Limites : aucune comparaison visuelle avant/après : navigateur Chromium absent,
+téléchargement reçu invalide. AppTest n'est pas une capture navigateur. Mobile,
+focus clavier et import de fichiers par navigateur restent à contrôler. Les tests
+métier couvrent SQLite fictif et Drive simulé ; pas de données réelles ni d'appel IA.
+Drive reste désactivé. Aucun workflow GitHub suivi ; absence d'intégration externe
+confirmée auparavant par l'utilisateur. Aucun déploiement exécuté.
+
+La publication et la fusion suivent les contrôles autorisés, via PR et SHA attendu.
+Le lien et le SHA fusionné seront consignés dans la PR et le compte rendu après
+vérification distante. Prochaine étape : contrôle visuel, puis lot D2 tableaux/filtres.
+
+Revue indépendante : 37 tests initiaux réussis, puis deux tests UI et suite 39.
+Elle a détecté un défaut d'isolation des nouveaux tests (cache des modules Python).
+Corrigé avant publication : chaque scénario s'exécute en sous-processus neuf,
+dossier temporaire et assertion que DB_PATH reste sous ce dossier. Revalidation
+complète après correction. Contrastes théoriques palette : bleu/blanc 6,70:1,
+texte/blanc 16,27:1 ; ce calcul ne remplace pas l'inspection du rendu réel.
+
+Acceptation finale indépendante après correction : 39 tests réussis (5,493 s),
+réserve isolation levée et `git diff --check` réussi. Aucun défaut bloquant trouvé.

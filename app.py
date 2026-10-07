@@ -3,6 +3,7 @@ import streamlit as st
 import pymupdf as fitz
 import io
 from edt_changes import changes_dataframe
+from ui_navigation import HOME, render_navigation, render_home
 
 from app_config import APP_MODE, IS_CLOUD, IS_STREAMLIT_CLOUD
 from auth_gate import require_login
@@ -39,7 +40,7 @@ from edt_parser import (
 )
 
 st.set_page_config(
-    page_title="Emplois du temps → Excel",
+    page_title="EDT / RH — Espace de travail",
     page_icon="📄",
     layout="wide",
 )
@@ -64,11 +65,44 @@ except Exception as exc:
 
 render_edt_sync_status()
 
-module = st.sidebar.radio(
-    "Module",
-    ["📅 Emplois du temps", "✅ Vérification globale", "🔎 Recherche globale", "📊 Statistiques EDT", "🗂️ Historique EDT", "👥 Ressources humaines", "☁️ Google Drive"],
-    key="main_module",
-)
+module = render_navigation()
+
+with st.sidebar.expander("Fichiers et options d’import", expanded=module == "📅 Emplois du temps"):
+    st.header("1. Fichiers")
+    timetable_files = st.file_uploader(
+        "Emplois du temps PDF ou Word",
+        type=["pdf", "docx"],
+        accept_multiple_files=True,
+    )
+
+    reference_file = st.file_uploader(
+        "Référentiel enseignants CSV ou Excel (optionnel)",
+        type=["csv", "xlsx"],
+        help=(
+            "Permet de compléter automatiquement Statut, Tél, Email et Département. "
+            "Votre Global_Estn.xlsx est accepté (feuille Intervenants), ainsi qu'un CSV "
+            "avec Nom et prénom; Statut; Tél; Email; Département. "
+            "Seules les identités correspondantes sont complétées."
+        ),
+    )
+
+    st.header("2. PDF scannés")
+    ocr_enabled = st.checkbox("Activer l'OCR si la page est une image", value=False)
+    tesseract_cmd = st.text_input(
+        "Chemin de tesseract.exe (si nécessaire)", value="",
+        help="Exemple Windows : C:\\Program Files\\Tesseract-OCR\\tesseract.exe. "
+             "Le programme Tesseract doit être installé séparément."
+    ) if ocr_enabled else ""
+
+    st.header("3. Export")
+    st.caption(
+        "Le résultat est généré en fichier Excel .xlsx avec la feuille "
+        "« Intervenants » au même format que votre fichier Global_Estn."
+    )
+
+if module == HOME:
+    render_home()
+    st.stop()
 
 if module == "✅ Vérification globale":
     render_global_verification()
@@ -101,38 +135,6 @@ st.caption(
     "et vous permet de corriger les séances avant de générer le fichier Excel."
 )
 
-with st.sidebar:
-    st.header("1. Fichiers")
-    timetable_files = st.file_uploader(
-        "Emplois du temps PDF ou Word",
-        type=["pdf", "docx"],
-        accept_multiple_files=True,
-    )
-
-    reference_file = st.file_uploader(
-        "Référentiel enseignants CSV ou Excel (optionnel)",
-        type=["csv", "xlsx"],
-        help=(
-            "Permet de compléter automatiquement Statut, Tél, Email et Département. "
-            "Votre Global_Estn.xlsx est accepté (feuille Intervenants), ainsi qu'un CSV "
-            "avec Nom et prénom; Statut; Tél; Email; Département. "
-            "Seules les identités correspondantes sont complétées."
-        ),
-    )
-
-    st.header("2. PDF scannés")
-    ocr_enabled = st.checkbox("Activer l'OCR si la page est une image", value=False)
-    tesseract_cmd = st.text_input(
-        "Chemin de tesseract.exe (si nécessaire)", value="",
-        help="Exemple Windows : C:\\Program Files\\Tesseract-OCR\\tesseract.exe. "
-             "Le programme Tesseract doit être installé séparément."
-    ) if ocr_enabled else ""
-
-    st.header("3. Export")
-    st.caption(
-        "Le résultat est généré en fichier Excel .xlsx avec la feuille "
-        "« Intervenants » au même format que votre fichier Global_Estn."
-    )
 
 if not timetable_files:
     st.subheader("🧠 Emplois du temps mémorisés")

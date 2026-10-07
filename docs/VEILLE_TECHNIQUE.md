@@ -47,3 +47,11 @@ guidage léger dans `app.py`, réversible par retrait des seuls éléments de
 présentation. Critère d'acceptation : sur données fictives, l'utilisateur distingue
 import, correction, enregistrement et export, sans modifier extraction, persistance
 ni fichier Excel ; la lisibilité visuelle reste à vérifier dans un vrai navigateur.
+
+## 7 octobre 2026 — D3b
+
+Besoin confirmé : état d'enregistrement fiable après correction. Le Pilote a
+examiné le hash canonique existant, SQLite et les messages Streamlit : aucune
+nouvelle technologie ni dépendance ne se justifie. Comparer les séances stockées
+en lecture seule évite de confondre un succès UI transitoire avec une sauvegarde.
+Aucun gain de performance mesuré ou nouveauté externe revendiqué.

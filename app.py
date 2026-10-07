@@ -4,6 +4,7 @@ import pymupdf as fitz
 import io
 from edt_changes import changes_dataframe
 from ui_navigation import HOME, render_navigation, render_home
+from edt_save_state import saved_state, render_saved_state
 
 from app_config import APP_MODE, IS_CLOUD, IS_STREAMLIT_CLOUD
 from auth_gate import require_login
@@ -321,6 +322,9 @@ with correction_tab:
     edited_details = st.data_editor(build_details_dataframe(all_sessions),
                                     use_container_width=True, hide_index=True,
                                     num_rows="dynamic", key="details_editor")
+    correction_save_status = st.empty()
+    st.caption("L’état concerne les séances de l’emploi sélectionné dans « Enregistrer / Versions ». "
+               "Vérifiez chaque emploi séparément. La provenance Source PDF / Page n’est pas comparée.")
 
 intervenants = build_intervenants_dataframe(
     edited_details.fillna("").to_dict("records"))
@@ -331,6 +335,8 @@ details = edited_details
 
 with export_tab:
     st.subheader("Vérifier la complétude et exporter")
+    export_save_status = st.empty()
+    st.caption("Télécharger Excel n’enregistre pas une version dans la mémoire locale.")
     incomplete_count = int(incomplete.sum())
     if details.empty:
         st.warning("0 séance(s) à compléter, mais aucune séance n'est disponible pour export.")
@@ -365,7 +371,8 @@ with export_tab:
 
     st.subheader("Liste des enseignants intervenants")
     st.caption(
-        "Vous pouvez corriger ou compléter les cellules avant de générer le fichier Excel."
+        "Vous pouvez corriger ou compléter les cellules avant de générer le fichier Excel. "
+        "Ces modifications du tableau Intervenants concernent uniquement l’export Excel."
     )
 
     edited = st.data_editor(
@@ -485,6 +492,7 @@ with memory_tab:
         comment = st.text_input("Commentaire de version (optionnel)", key="edt_mem_comment")
 
         st.caption(f"{len(subset)} séance(s) seront mémorisées pour {filiere} {niveau}.")
+        memory_save_status = st.empty()
         if st.button("💾 Enregistrer comme nouvelle version", use_container_width=True, key="edt_mem_save"):
             try:
                 result = save_version(subset, academic_year, period, filiere, niveau, comment)
@@ -501,8 +509,15 @@ with memory_tab:
                     st.warning("Version enregistrée, mais comparaison impossible : " + result["changes_error"])
             except Exception as exc:
                 st.error(f"Enregistrement impossible : {exc}")
+        state = saved_state(subset, academic_year, period, filiere, niveau)
+        state_label = f"{filiere} {niveau} · {academic_year} · {period}"
+        for status_target in (correction_save_status, export_save_status, memory_save_status):
+            render_saved_state(status_target, state, state_label)
     else:
         st.info("Aucune Filière / Niveau n'est disponible dans les séances affichées.")
+        state = {"status": "empty" if mem_details.empty else "incomplete"}
+        for status_target in (correction_save_status, export_save_status):
+            render_saved_state(status_target, state, "Séances affichées")
 
     st.markdown("#### Historique")
     memory = list_memory()

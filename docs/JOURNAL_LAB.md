@@ -167,3 +167,32 @@ Limites : aucun navigateur local ou outil d'automatisation navigateur disponible
 aucune comparaison visuelle avant/après, validation petit écran ou focus clavier.
 Le test UI réel couvre l'écran sans import, pas un chargement de fichier complet.
 Publication et fusion restent à effectuer via PR ; aucun déploiement.
+
+## 2026-10-07 — D3b, état interactif des séances enregistrées
+
+Base distante revérifiée : `67df619`, aucune PR ouverte. Branche
+`lab/design-save-state`. Le travail commencé plus tôt n'avait produit aucun code ;
+la reprise a confirmé un arbre propre et aucun agent concurrent actif.
+
+Diagnostic : auto-save avant l'éditeur détaillé et succès manuel transitoire.
+Livré localement : comparaison SQLite en lecture seule après édition/enregistrement,
+messages dans les trois onglets pour la cible sélectionnée, distinction version
+active/archivée, vide, cible incomplète et état inconnu. Les éditions Intervenants
+restent pour Excel seulement ; Source PDF/Page exclus de l'identité métier existante.
+Fichiers : app.py, edt_save_state.py, tests/test_save_state.py et cinq documents.
+
+Preuves responsable : `/tmp/edt-ui-venv/bin/python -m unittest discover -s tests
+-p test_save_state.py -v` : 6 réussis ; même commande sans filtre, `-q` : 55 tests
+réussis en 8,410 s. Revue indépendante acceptée : 6 tests en 1,606 s et 55 en
+8,845 s, diff-check réussi. AppTest exerce les trois messages sur import fictif,
+correction injectée, sauvegarde, réexécution, échec simulé et retour V1 archivée.
+SQLite temporaire couvre ajout/suppression/contexte/erreur/lecture seule et
+réouverture avec export Excel de la correction. Aucun nom réel ni secret.
+
+Limites : AppTest injecte les corrections, sans gestes réels dans la grille ;
+pas de validation navigateur/mobile/clavier ni de navigation avec saisies.
+Pas de nouvelle dépendance projet, extraction/écriture/export métier inchangés.
+Drive désactivé. Aucun workflow suivi ; script de déploiement manuel non exécuté ;
+absence de déploiement automatique externe déjà confirmée par l'utilisateur.
+Publication/fusion par PR à effectuer, avec revérification SHA et arbre exact.
+Prochaine priorité : diagnostic correction/annulation et maintien des saisies.

@@ -132,3 +132,38 @@ agent n'a été lancé en boucle.
 Limites : AppTest ne valide ni rendu visuel réel, ni petit écran, ni navigation au
 clavier. Aucune capture avant/après disponible. Publication et fusion restent à
 effectuer via PR après contrôle exact du distant ; aucun déploiement.
+
+## 2026-10-07 — D3a, guidage import, correction et export
+
+Base distante : `d31e253cae993b05cea31a12c0b9478c1bc7e5f2`, PR nº 6
+fusionnée et aucune PR ouverte au démarrage. Branche :
+`lab/design-import-guidance`. Lot limité à la présentation du parcours EDT.
+
+Diagnostic confirmé : la barre latérale présentait « 3. Export » sans action
+d'export ; l'export précédait la correction dans les onglets ; état de complétude,
+métriques et contrôle documentaire étaient hors contexte. Changements : guide
+avant import, libellés latéraux descriptifs, onglets ordonnés « Corriger »,
+« Vérifier et exporter », « Enregistrer / Versions », puis assistant optionnel.
+L'étape d'export affiche désormais « Prêt pour export », le nombre de séances à
+compléter ou l'absence de séance. Aucun bouton ou indicateur fictif n'a été ajouté.
+
+Extraction, référentiel, règles de complétude, données éditées, persistance,
+versions, synchronisation, assistant et génération Excel ne sont pas modifiés.
+Les 19 widgets, clés et libellés techniques ont été comparés à la base et sont
+identiques. Drive reste désactivé ; aucune dépendance ni workflow ajouté.
+
+Validation responsable :
+`/tmp/edt-d2a-venv/bin/python -m unittest tests.test_import_workflow_ui -v`
+— 6 tests réussis ; suite complète — 49 tests réussis en 13,347 s ; compilation
+Python et `git diff --check` réussis. AppTest contrôle le guide avant import ; les
+autres contrôles ciblés inspectent la structure et les clés sur l'arbre exact.
+
+La vérification indépendante a d'abord refusé une numérotation contradictoire entre
+le guide et les onglets. Le guide a été corrigé puis la vérification complète a été
+reprise : 6 tests ciblés en 2,645 s, 49 tests en 11,653 s et `git diff --check`
+réussis ; aucun défaut bloquant restant.
+
+Limites : aucun navigateur local ou outil d'automatisation navigateur disponible ;
+aucune comparaison visuelle avant/après, validation petit écran ou focus clavier.
+Le test UI réel couvre l'écran sans import, pas un chargement de fichier complet.
+Publication et fusion restent à effectuer via PR ; aucun déploiement.

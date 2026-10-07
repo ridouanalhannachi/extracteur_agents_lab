@@ -68,7 +68,7 @@ render_edt_sync_status()
 module = render_navigation()
 
 with st.sidebar.expander("Fichiers et options d’import", expanded=module == "📅 Emplois du temps"):
-    st.header("1. Fichiers")
+    st.header("Documents à importer")
     timetable_files = st.file_uploader(
         "Emplois du temps PDF ou Word",
         type=["pdf", "docx"],
@@ -86,7 +86,7 @@ with st.sidebar.expander("Fichiers et options d’import", expanded=module == "�
         ),
     )
 
-    st.header("2. PDF scannés")
+    st.header("Lecture des PDF scannés")
     ocr_enabled = st.checkbox("Activer l'OCR si la page est une image", value=False)
     tesseract_cmd = st.text_input(
         "Chemin de tesseract.exe (si nécessaire)", value="",
@@ -94,7 +94,7 @@ with st.sidebar.expander("Fichiers et options d’import", expanded=module == "�
              "Le programme Tesseract doit être installé séparément."
     ) if ocr_enabled else ""
 
-    st.header("3. Export")
+    st.header("Résultat généré")
     st.caption(
         "Le résultat est généré en fichier Excel .xlsx avec la feuille "
         "« Intervenants » au même format que votre fichier Global_Estn."
@@ -133,6 +133,11 @@ st.caption(
     "Importez un ou plusieurs emplois du temps PDF ou Word (.docx). "
     "L'application essaie plusieurs méthodes de lecture, signale les champs incertains "
     "et vous permet de corriger les séances avant de générer le fichier Excel."
+)
+st.info(
+    "Parcours : importez les documents dans la barre latérale, puis suivez les "
+    "onglets numérotés pour corriger les séances, vérifier et exporter, puis "
+    "enregistrer une version. L'assistant local reste optionnel."
 )
 
 
@@ -215,7 +220,7 @@ if all_warnings:
 
 if not all_sessions:
     st.warning("Aucune séance n'a été extraite automatiquement. Vous pouvez ajouter les séances "
-               "dans l'onglet « Séances détaillées », ou activer l'OCR pour un PDF scanné.")
+               "dans l'onglet « 1 · Corriger les séances », ou activer l'OCR pour un PDF scanné.")
 
 with st.expander("Aperçu du document source"):
     if st.checkbox("Afficher l'aperçu", value=False):
@@ -301,10 +306,15 @@ if all_sessions:
     except Exception as exc:
         st.warning(f"🧠 Mémoire automatique EDT non appliquée : {exc}")
 
-tab1, tab2, tab3, tab4 = st.tabs(["Liste des enseignants intervenants", "Séances détaillées", "🤖 Assistant IA", "🧠 Mémoire / Versions"])
-with tab2:
+correction_tab, export_tab, memory_tab, assistant_tab = st.tabs([
+    "1 · Corriger les séances",
+    "2 · Vérifier et exporter",
+    "3 · Enregistrer / Versions",
+    "4 · Assistant local",
+])
+with correction_tab:
     st.subheader("Séances détectées à vérifier")
-    st.caption("Après correction, enregistrez les séances dans l'onglet « Mémoire / Versions ». "
+    st.caption("Après correction, vérifiez l'état d'export dans l'étape 2. "
                "Corrigez ou supprimez les séances inexactes, et ajoutez celles qui manquent. "
                "Pour une nouvelle ligne, renseignez aussi Jour, Filière, Niveau, Source PDF et Durée. "
                "Si vous modifiez un horaire, corrigez aussi sa durée en heures.")
@@ -317,37 +327,43 @@ intervenants = build_intervenants_dataframe(
 incomplete = (edited_details.reindex(columns=["Jour", "Matière", "Nom et prénom", "Horaire",
                                               "Durée", "Filière", "Niveau"])
               .fillna("").astype(str).apply(lambda col: col.str.strip() == "").any(axis=1))
-if incomplete.any():
-    st.warning(f"{int(incomplete.sum())} séance(s) à compléter dans le tableau détaillé avant export.")
-
-if reference_file is not None:
-    try:
-        reference = read_teacher_reference(reference_file.getvalue(), reference_file.name)
-        intervenants = merge_teacher_reference(intervenants, reference)
-        st.success("Référentiel enseignants fusionné.")
-    except Exception as exc:
-        st.warning(f"Référentiel non appliqué : {exc}")
-
 details = edited_details
 
-c1, c2, c3 = st.columns(3)
-c1.metric("Séances détectées", len(details))
-c2.metric("Lignes enseignants/matières", len(intervenants))
-c3.metric("Documents traités", len(timetable_files))
-if len(set(x["Source PDF"] for x in all_sessions)) < len(timetable_files):
-    st.warning("Au moins un document ne contient aucune séance extraite. Vérifiez les avertissements avant l'export.")
+with export_tab:
+    st.subheader("Vérifier la complétude et exporter")
+    incomplete_count = int(incomplete.sum())
+    if details.empty:
+        st.warning("0 séance(s) à compléter, mais aucune séance n'est disponible pour export.")
+    elif incomplete_count:
+        st.warning(f"{incomplete_count} séance(s) à compléter avant export.")
+    else:
+        st.success("Prêt pour export")
 
-with st.expander("Contrôle par document", expanded=True):
-    st.dataframe(details.groupby("Source PDF", as_index=False).agg(
-        Séances=("Matière", "size"), Matières=("Matière", "nunique")
-    ), use_container_width=True, hide_index=True)
-    st.caption("CH reprend la charge hebdomadaire du modèle Global_Estn : "
-               "une séance de 3h15 ou un couple cours/TD de 3h30 est ramené à 3h. "
-               "Les durées exactes figurent dans « Séances détaillées ». "
-               "Vérifiez les enseignants et matières qui ont changé depuis le référentiel.")
+    if reference_file is not None:
+        try:
+            reference = read_teacher_reference(reference_file.getvalue(), reference_file.name)
+            intervenants = merge_teacher_reference(intervenants, reference)
+            st.success("Référentiel enseignants fusionné.")
+        except Exception as exc:
+            st.warning(f"Référentiel non appliqué : {exc}")
 
-with tab1:
-    st.subheader("Liste des Enseignants intervenants")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Séances détectées", len(details))
+    c2.metric("Lignes enseignants/matières", len(intervenants))
+    c3.metric("Documents traités", len(timetable_files))
+    if len(set(x["Source PDF"] for x in all_sessions)) < len(timetable_files):
+        st.warning("Au moins un document ne contient aucune séance extraite. Vérifiez les avertissements avant l'export.")
+
+    with st.expander("Contrôle par document", expanded=True):
+        st.dataframe(details.groupby("Source PDF", as_index=False).agg(
+            Séances=("Matière", "size"), Matières=("Matière", "nunique")
+        ), use_container_width=True, hide_index=True)
+        st.caption("CH reprend la charge hebdomadaire du modèle Global_Estn : "
+                   "une séance de 3h15 ou un couple cours/TD de 3h30 est ramené à 3h. "
+                   "Les durées exactes figurent dans « Corriger les séances ». "
+                   "Vérifiez les enseignants et matières qui ont changé depuis le référentiel.")
+
+    st.subheader("Liste des enseignants intervenants")
     st.caption(
         "Vous pouvez corriger ou compléter les cellules avant de générer le fichier Excel."
     )
@@ -378,14 +394,12 @@ with tab1:
         use_container_width=True,
         disabled=intervenants.empty or bool(incomplete.any()),
     )
-
-with tab2:
     st.info(
         "Les séances corrigées sont ajoutées dans une deuxième feuille "
         "du même fichier Excel : « Séances détaillées »."
     )
 
-with tab3:
+with assistant_tab:
     st.subheader("🤖 Assistant local Emplois du Temps")
     st.caption(f"Agent local v{AGENT_VERSION} — moteur factuel Python actif")
     if IS_CLOUD:
@@ -434,9 +448,13 @@ with tab3:
             st.error(f"Erreur assistant : {exc}")
 
 
-with tab4:
+with memory_tab:
     st.subheader("🧠 Mémoire des emplois du temps")
     st.caption("Chaque nouvel emploi différent devient V1, V2, V3... L'ancienne version reste conservée.")
+    st.info(
+        "Enregistrer une version conserve les séances corrigées et leur historique. "
+        "Cette action ne remplace pas la « Vérification globale », accessible dans la navigation."
+    )
 
     ensure_edt_memory_db()
     mem_details = details.fillna("").copy()

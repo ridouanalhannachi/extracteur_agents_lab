@@ -3,62 +3,77 @@
 ## Cadre et état examiné — 2026-10-07
 
 Dépôt exclusif : `ridouanalhannachi/extracteur_agents_lab`.
-Base : `58ac343` (`main`, fusion de la PR nº 5). Le responsable a vérifié le
-distant : PR nº 1 à 5 fusionnées, aucune PR ouverte au début du cycle. D1 est
-donc intégré ; ses 39 tests consignés au journal sont des preuves historiques,
-pas une exécution nouvelle. Les travaux des anciennes copies locales sont
-préservés ; aucun de ces fichiers n'est repris ni écrasé ici.
+Base : `d31e253` (`main`, fusion de la PR nº 6). Le responsable a confirmé que
+les PR nº 1 à 6 sont fusionnées et qu'aucune PR n'est ouverte au début du cycle.
+D1 et D2a sont donc intégrés ; leurs résultats consignés restent des preuves
+historiques et non des tests exécutés pendant ce cycle.
 
-La priorité explicite du 6 octobre est le design et l'ergonomie. Elle remplace
-L3 pour le choix du lot après préservation des travaux inachevés. Pas de migration,
-de dépendance nouvelle, de déploiement ou de modification du dépôt d'origine.
-Drive reste désactivé. Les fusions par PR du laboratoire sont autorisées par
-l'utilisateur après tests de la version exacte, revue indépendante, contrôle du
-SHA distant et des protections ; cette autorisation prévaut sur les anciennes
-mentions demandant un nouvel accord pour chaque fusion. Aucun push direct sur main.
+La priorité explicite du 6 octobre reste le design et l'ergonomie. Pas de
+migration de framework, de nouvelle dépendance, de déploiement ni de modification
+du dépôt d'origine. Drive reste désactivé. Les fusions par PR du laboratoire sont
+autorisées après validation de la version exacte et respect des protections ;
+aucun push direct sur `main`.
 
 ## Objectifs actifs (maximum cinq)
 
 | Priorité / objectif | Problème observé ou hypothèse | Bénéfice utilisateur | Coût / risque | Dépendances | Critère mesurable | État |
 |---|---|---|---|---|---|---|
-| 1 — D2a : catalogue de l'historique | Observé dans `edt_history_ui.py` : quatre filtres sont alignés sur une seule rangée, le titre du tableau reste « Tous les emplois » après filtrage, et aucun décompte visible ni action de réinitialisation n'aide à comprendre le résultat. | Retrouver un emploi mémorisé plus vite et savoir immédiatement si un filtre est actif. | Faible / faible à modéré : préserver exactement la sélection des emplois, versions et données affichées. | D1 intégré ; composants Streamlit natifs ; données fictives. | Sur une fixture d'au moins deux emplois : état initial `2/2`, un filtre donne le même sous-ensemble métier attendu (`1/2`), la réinitialisation revient à `2/2`, et le cas sans résultat reste explicite ; suite complète réussie. Le rendu étroit/clavier n'est déclaré validé qu'avec un navigateur réel. | Vérifié localement : 43 tests réussis, dont parcours AppTest ; revue indépendante indisponible |
-| 2 — D1 : accueil et navigation | L'absence d'accueil et la perte visuelle des options d'import ont été corrigées dans la PR nº 5. | Comprendre l'application et trouver immédiatement les fonctions existantes. | Faible / résiduel : inspection navigateur non faite. | Intégré à `main` au commit `58ac343`. | 39 tests, dont deux AppTest ; six accès réels, retour accueil, OCR conservé et Drive désactivé. | Intégré et vérifié ; rendu visuel/mobile non vérifié |
-| 3 — D3 : parcours import, correction et validation | Observé : import dans la barre latérale puis quatre onglets et actions dispersées ; difficulté réelle à confirmer par un parcours complet. | Savoir quoi importer, vérifier et enregistrer avant export. | Moyen / modéré : widgets d'édition et persistance. | D1 ; tests de conservation L1. | Un document fictif parcourt import → correction → validation → export ; correction conservée après réouverture ; libellés des étapes et erreurs explicites. | Proposé |
-| 4 — D4 : états vides et sauvegardes explicites | Hypothèse : cohérence des messages entre écrans à vérifier ; L2a interdit déjà les remplacements distants. | Distinguer absence de données, erreur et enregistrement local confirmé. | Moyen / modéré : ne pas annoncer une réussite non établie. | D1 ; garde L2a ; Drive désactivé. | Parcours vide, correction non enregistrée, succès local et échec simulé documentés ; aucun faux succès distant ; mémoire intacte. | Proposé |
-| 5 — L3 : restauration conservatrice | Hypothèse conservée : une base distante valide mais ancienne peut menacer les corrections locales ; aucun nouveau défaut reproduit dans ce cycle. | Restaurer sans perdre les dernières corrections. | Moyen / élevé : remplacement de base. | Diagnostic séparé ; SQLite temporaire et Drive simulé uniquement. | Simulations d'interruption, corruption et ancienneté ; comparer séances, versions, validations et intégrité locale. | Proposé, différé après priorités design |
+| 1 — D3a : repères import → correction → enregistrement/export | **Observé dans `app.py`** : la barre latérale affiche « 1. Fichiers », « 2. PDF scannés », puis « 3. Export » alors qu'elle ne contient aucune action d'export ; la correction est le deuxième onglet et l'enregistrement le quatrième. Les actions existantes sont donc présentées dans un ordre difficile à anticiper. | Comprendre dès l'arrivée où déposer un document, où corriger les séances et où enregistrer ou exporter le résultat. | Faible à moyen / modéré : conserver les mêmes widgets, clés, données et actions métier. | D1 et D2a intégrés ; composants Streamlit natifs ; fixture assainie. | Les étapes existantes sont nommées et ordonnées sans faux bouton ; AppTest contrôle le guide avant import, les tests structurels contrôlent onglets, états et clés ; suite complète réussie. Une capture navigateur reste nécessaire pour déclarer le rendu visuel validé. | **Vérifié localement et accepté indépendamment : 49 tests** |
+| 2 — D3b : validation et conservation après correction | **Observé** : l'import est mémorisé automatiquement avant l'éditeur détaillé ; après correction, l'utilisateur doit employer « Enregistrer comme nouvelle version » dans un autre onglet. **Hypothèse à vérifier** : cette séparation peut faire croire que les corrections sont déjà conservées. | Savoir sans ambiguïté si la version corrigée est enregistrée avant de quitter ou d'exporter. | Moyen / modéré à élevé : risque direct sur les versions et la persistance. | D3a ; socle L1 ; diagnostic séparé avant changement métier. | Sur données fictives, corriger une séance, enregistrer, rouvrir puis exporter conserve exactement la correction ; les états non enregistré/enregistré sont distincts et aucun succès distant n'est annoncé. | Proposé, hors lot D3a |
+| 3 — D4 : états vides, erreurs et sauvegardes explicites | **Hypothèse** : la cohérence des messages entre écrans reste à auditer ; L2a interdit déjà les remplacements distants. | Distinguer absence de données, erreur et enregistrement local confirmé. | Moyen / modéré : ne pas annoncer une réussite non établie. | D3b ; garde L2a ; Drive désactivé. | Parcours vide, correction non enregistrée, succès local et échec simulé couverts ; aucun faux succès distant ; mémoire intacte. | Proposé |
+| 4 — D5 : petits écrans et accessibilité | **Limite confirmée** : D1 et D2a n'ont pas été inspectés dans un navigateur réel ; comportement clavier, focus et affichage étroit restent inconnus. | Utiliser les fonctions principales sur un petit écran et au clavier, avec libellés et contrastes lisibles. | Moyen / faible à modéré : ajustements CSS/structure à garder légers. | Lots D1 à D4 ; navigateur réellement disponible. | À 360 px, aucune action principale n'est masquée ; ordre de focus logique, libellés accessibles et contraste texte/fond ≥ 4,5:1 pour le texte normal. | Proposé |
+| 5 — L3 : restauration conservatrice | **Hypothèse conservée** : une base distante valide mais ancienne peut menacer les corrections locales ; aucun nouveau défaut reproduit dans ce cycle. | Restaurer sans perdre les dernières corrections. | Moyen / élevé : remplacement de base. | Diagnostic séparé ; SQLite temporaire et Drive simulé uniquement. | Simulations d'interruption, corruption et ancienneté ; comparer séances, versions, validations et intégrité locale. | Proposé, différé après priorités design |
 
-L'adaptation aux petits écrans, le contraste, les libellés et le focus sont des
-critères transversaux des lots design ; ne pas annoncer leur validation sans preuve.
-Les imports enseignants étendus et analyses de descriptifs restent des propositions
-futures séparées, pas des fonctionnalités livrées par ce cycle.
+## Socle design intégré à préserver
+
+- D1 — accueil et navigation : intégré via PR nº 5 à `58ac343` ; 39 tests
+  historiques. Le rendu navigateur/mobile n'a pas été vérifié.
+- D2a — catalogue et filtres de l'historique : intégré via PR nº 6 à
+  `d31e253` ; 43 tests historiques. Le rendu navigateur/mobile et le clavier
+  n'ont pas été vérifiés.
+
+Ces lots ne sont plus des objectifs actifs et ne doivent pas être recommencés
+sans défaut reproduit.
 
 ## Lot retenu et fichiers attribués
 
-Un seul lot : **D2a — catalogue de l'historique**, branche
-`lab/design-table-filters`. Le périmètre est volontairement limité au premier
-tableau de `render_edt_history()` et à ses quatre filtres. Les tableaux de
-statistiques, RH, séances, versions et changements restent hors lot.
+Un seul lot : **D3a — repères import → correction → enregistrement/export**, sur
+la branche `lab/design-import-guidance`. Le lot réorganise uniquement la
+présentation des fonctions déjà présentes dans l'écran « Emplois du temps » :
+libellés de la barre latérale, guide d'étapes et ordre/titres des zones ou onglets
+concernés. Il n'ajoute aucune fonction, statistique ou dépendance.
 
-Diagnostic confirmé par lecture : les quatre filtres sont présentés sur une seule
-ligne ; le tableau filtré conserve le titre « Tous les emplois mémorisés » ; aucun
-décompte résultat/total ni commande de réinitialisation n'est présent. Une gêne
-réelle sur petit écran reste une hypothèse tant qu'un navigateur n'a pas permis de
-la constater.
+Hors lot : algorithmes d'extraction, règles de complétude, auto-enregistrement,
+création/activation des versions, contenu du classeur Excel, assistant local,
+requêtes SQLite, Drive et autres modules. D3a ne prétend pas résoudre l'hypothèse
+de conservation formulée dans D3b.
 
-- Développeur : `edt_history_ui.py` et un test UI ciblé attribué par le
-  responsable ; améliorer la hiérarchie des filtres et du catalogue sans changer
-  requêtes SQL, règles de filtrage, choix d'emploi, versions ni exports.
 - Pilote : uniquement `docs/OBJECTIFS_PILOTE.md` et `docs/BACKLOG_LAB.md`.
-- Vérificateur indépendant : lecture du diff exact et exécution des contrôles ;
-  ne modifie pas les fichiers du développeur.
-- Éclaireur : diagnostic d'un besoin technique concret ; aucune nouvelle
-  dépendance n'est a priori nécessaire pour les composants Streamlit natifs.
-- Responsable : journal, relais, intégration des preuves, publication et fusion
-  conditionnelle par PR ; aucune modification directe de main ni déploiement.
+- Développeur : `app.py` et un nouveau test UI ciblé ; préserver les clés de
+  widgets, les appels métier et les conditions d'activation des actions.
+- Vérificateur indépendant : lecture du diff exact et exécution des tests ciblés
+  puis complets ; aucun fichier attribué en écriture.
+- Éclaireur : `docs/VEILLE_TECHNIQUE.md` uniquement ; rechercher une technologie
+  seulement si un défaut concret l'exige. Les composants Streamlit natifs
+  suffisent a priori.
+- Responsable : `docs/JOURNAL_LAB.md`, `docs/REPRISE_AGENTS.md`, publication et
+  fusion conditionnelle via PR ; aucune modification directe de `main` et aucun
+  déploiement.
 
-## Reprise
+## Critères d'acceptation D3a
 
-D2a a été vérifié localement sur données fictives. La délégation de développement
-a rencontré une limite d'usage ; le responsable a repris le code puis effectué une
-revue successive non indépendante. Une validation AppTest ne vaut pas une comparaison
-visuelle navigateur. Publier via PR seulement après nouvelle vérification distante.
+1. Avant import, l'écran indique trois étapes cohérentes : importer, corriger et
+   vérifier, puis enregistrer ou exporter ; les libellés distinguent clairement
+   l'enregistrement local de l'export Excel.
+2. La barre latérale ne présente plus « Export » comme une section contenant une
+   action lorsqu'elle ne contient qu'une explication ; aucun bouton fictif n'est
+   ajouté.
+3. Après chargement d'une fixture fictive, les actions existantes de correction,
+   enregistrement de version et téléchargement restent accessibles, avec les
+   mêmes conditions d'activation et les mêmes effets métier.
+4. Aucun changement n'affecte extraction, données éditées, persistance, versions,
+   synchronisation désactivée ou octets exportés ; test ciblé et suite complète
+   réussis sur l'arbre exact.
+5. Une comparaison avant/après n'est déclarée que si l'interface peut être lancée
+   et capturée dans un vrai navigateur. AppTest seul prouve la structure et le
+   parcours automatisé, pas le rendu visuel, le mobile ou le focus clavier.

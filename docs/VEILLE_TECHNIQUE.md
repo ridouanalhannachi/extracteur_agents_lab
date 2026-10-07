@@ -33,3 +33,17 @@ simple retrait des ajustements d'interface. Critère d'acceptation : filtres
 compréhensibles, résultat vide explicite et colonnes essentielles lisibles, sans
 régression des exports. Aucun workflow de déploiement n'est présent dans le dépôt
 et `DRIVE_ENABLED` demeure fixé à `False` dans le laboratoire.
+
+## 2026-10-07 — D3, guidage import, correction et export
+
+Aucune nouvelle technologie n'est justifiée. Le problème observé est un parcours
+réparti entre les fichiers de la barre latérale, les corrections de métadonnées,
+quatre onglets et l'export ; les composants Streamlit natifs déjà installés
+(conteneurs, messages d'état, onglets et boutons) suffisent à rendre les étapes et
+leurs prérequis explicites. Ajouter un composant « stepper », une bibliothèque UI
+ou changer de framework augmenterait installation, mémoire, maintenance et surface
+de sécurité sans gain mesuré sur les PC modestes. L'alternative retenue est un
+guidage léger dans `app.py`, réversible par retrait des seuls éléments de
+présentation. Critère d'acceptation : sur données fictives, l'utilisateur distingue
+import, correction, enregistrement et export, sans modifier extraction, persistance
+ni fichier Excel ; la lisibilité visuelle reste à vérifier dans un vrai navigateur.

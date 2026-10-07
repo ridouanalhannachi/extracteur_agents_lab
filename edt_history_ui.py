@@ -7,6 +7,7 @@ import pandas as pd
 import streamlit as st
 
 from app_config import DB_PATH
+from edt_memory import activate_timetable_version
 
 
 HISTORY_FILTERS = (
@@ -366,6 +367,69 @@ def _render_version(version):
     _render_change_block(version_id, version_number)
 
 
+def _render_version_action(timetable_id, version, active_version_number):
+    """Render the explicit, contextual activation control for one version."""
+    version_id = int(version["id"])
+    version_number = int(version["version_number"])
+    is_active = bool(int(version.get("is_active", 0) or 0))
+
+    st.markdown("#### Action sur la version sélectionnée")
+    state_label = "Active" if is_active else "Archivée"
+    st.info(f"V{version_number} sélectionnée — {state_label}")
+
+    flash_key = f"history_version_action_flash_{timetable_id}"
+    flash = st.session_state.pop(flash_key, None)
+    if flash:
+        st.success(flash)
+
+    confirm_key = f"history_confirm_activate_{timetable_id}_{version_id}"
+    reset_key = f"history_reset_confirm_activate_{timetable_id}_{version_id}"
+    if st.session_state.pop(reset_key, False):
+        st.session_state.pop(confirm_key, None)
+
+    if is_active:
+        st.caption("Cette version est déjà utilisée comme version active.")
+        return
+
+    if active_version_number is not None:
+        st.caption(
+            f"L’activation de V{version_number} archivera V{active_version_number}. "
+            "Les séances des deux versions resteront enregistrées."
+        )
+
+    confirmed = st.checkbox(
+        f"Je confirme l’activation de V{version_number}.",
+        key=confirm_key,
+        help="L’ancienne version active sera archivée. Aucune séance ne sera supprimée.",
+    )
+    if st.button(
+        f"Activer V{version_number}",
+        key=f"history_activate_version_{timetable_id}_{version_id}",
+        disabled=not confirmed,
+        type="primary",
+    ):
+        try:
+            result = activate_timetable_version(
+                timetable_id,
+                version_id,
+                db_path=DB_PATH,
+            )
+        except (ValueError, sqlite3.Error) as exc:
+            st.error(f"Activation impossible : {exc}")
+            return
+
+        previous = result.get("previous_version_number")
+        if result.get("status") == "already_active":
+            message = f"V{version_number} était déjà active. Aucune donnée n’a été modifiée."
+        elif previous is None or int(previous) == version_number:
+            message = f"V{version_number} est maintenant active."
+        else:
+            message = f"V{version_number} est maintenant active ; V{int(previous)} a été archivée."
+        st.session_state[flash_key] = message
+        st.session_state[reset_key] = True
+        st.rerun()
+
+
 def render_edt_history():
     st.title("🗂️ Historique des emplois du temps")
     st.caption(
@@ -508,8 +572,18 @@ def render_edt_history():
         selected_rows = [version_records[0]]
         st.session_state[session_key] = int(selected_rows[0]["id"])
 
+    selected_version = selected_rows[0]
+    active_rows = [
+        row for row in version_records
+        if int(row.get("is_active", 0) or 0) == 1
+    ]
+    active_version_number = (
+        int(active_rows[0]["version_number"]) if active_rows else None
+    )
+
     st.divider()
-    _render_version(selected_rows[0])
+    _render_version_action(timetable_id, selected_version, active_version_number)
+    _render_version(selected_version)
 
     st.divider()
     show_all = st.checkbox(

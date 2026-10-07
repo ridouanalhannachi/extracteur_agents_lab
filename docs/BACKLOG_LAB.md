@@ -1,33 +1,30 @@
 # Backlog EDT/RH — 7 octobre 2026
 
-Base vérifiée : `c0c10d2`, PR 1 à 8 fusionnées, aucune PR ouverte au début du
-cycle. Le socle de fiabilité et D1/D2a/D3a/D3b sont intégrés.
+Base vérifiée : `03425a1`, PR 1 à 9 fusionnées, aucune PR ouverte au début du
+cycle. Le socle de fiabilité, D1/D2a/D3a/D3b et I2 sont intégrés.
 
-## Lot en cours : I2 — Brouillon de correction contrôlé
+## Lot en cours : I3 — Activation contextuelle d'une version
 
-Diagnostic confirmé : `details_editor` alimentait immédiatement les étapes
-suivantes, sans action explicite appliquer/annuler ni checkpoint indépendant de
-l'état interne du widget Streamlit.
+Diagnostic confirmé : l'Historique conservait la version sélectionnée mais ne
+proposait aucune action sur elle. `edt_memory.py` savait créer une nouvelle version,
+pas réactiver explicitement une version archivée.
 
-Livrable développé : brouillon de travail conservé lors des reruns et changements
-de module ; boutons « Appliquer les corrections » et « Annuler les modifications
-en cours » ; messages distincts pour modifications en cours, corrections appliquées
-localement et version réellement enregistrée. Export, assistant et mémoire utilisent
-uniquement le dernier brouillon appliqué. Changer les fichiers importés réinitialise
-le brouillon avec un message explicite.
+Livrable développé : action sur la version sélectionnée, confirmation en deux temps,
+bouton désactivé avant confirmation, transaction SQLite atomique et retour exact
+sur la nouvelle et l'ancienne version active. La sélection reste sur la version
+activée après relance. Aucune suppression ni réécriture de séance/commentaire.
 
-Critères : modification/ajout/suppression persistent pendant navigation ; appliquer
-change le checkpoint sans écrire en base ; annuler restaure le dernier appliqué ;
-nouvel import ne réutilise aucune saisie ; l'enregistrement reste l'unique création
-manuelle de version ; tests D3b toujours réussis.
+Critères : exactement une active après confirmation ; aucune écriture avant celle-ci ;
+appel répété idempotent ; mauvais emploi/version refusé sans mutation ; statuts métier,
+versions, séances et commentaires préservés.
 
-État : 56 tests réussis par le responsable et par le vérificateur indépendant. Pas de
-capture navigateur, validation tactile/mobile ou geste réel dans la grille : AppTest
-injecte le DataFrame équivalent à une édition.
+État : 62 tests et 15 sous-tests réussis par le responsable ; revue indépendante
+acceptée avec 10 tests ciblés et 62 tests complets. AppTest couvre sélection, verrou de confirmation, activation, retour et
+persistance ; SQLite temporaire couvre transaction et intégrité.
 
 ## Suite
 
-1. I3 : diagnostiquer les actions contextuelles sur les versions.
+1. I4 : évaluer l'export contextuel de la version consultée.
 2. D5 : vérifier petit écran, clavier et contraste dans un navigateur réel.
 3. L3 : restauration conservatrice, différée après les besoins interactifs.
 

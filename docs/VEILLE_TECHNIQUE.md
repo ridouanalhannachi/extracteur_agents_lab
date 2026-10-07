@@ -8,3 +8,15 @@ avec Python, SQLite et des PC modestes. Ajouter un outil de synchronisation ou u
 base distribuée augmenterait le coût, le risque et le périmètre sans démontrer un
 gain pour ce lot. Réévaluer seulement après le diagnostic de L3 ou si une écriture
 conditionnelle officiellement prise en charge devient nécessaire.
+
+## 2026-10-06 — D1, accueil et navigation
+
+Diagnostic du code : la navigation actuelle utilise déjà les composants Streamlit
+et donne accès à sept modules existants. Le premier écran concentre les consignes
+d'importation et les réglages dans la barre latérale, sans accueil dédié.
+Aucune nouvelle dépendance ni migration de framework n'est justifiée pour clarifier
+ces accès et la hiérarchie visuelle. Conserver les composants présents, avec une
+mise en forme légère ; aucun service, coût ou appel IA supplémentaire proposé.
+Le bénéfice reste à vérifier sur les parcours réels : accueil compréhensible,
+accès à chaque module existant et conservation des importations, corrections et
+exports. La comparaison visuelle dépend de la possibilité de lancer l'interface.

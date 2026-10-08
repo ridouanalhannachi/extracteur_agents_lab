@@ -1,32 +1,29 @@
 # Backlog EDT/RH — 7 octobre 2026
 
-Base vérifiée : `03425a1`, PR 1 à 9 fusionnées, aucune PR ouverte au début du
-cycle. Le socle de fiabilité, D1/D2a/D3a/D3b et I2 sont intégrés.
+Base vérifiée : `b41b044`, PR 1 à 10 fusionnées, aucune PR ouverte au début du
+cycle. Le socle de fiabilité et les lots interactifs jusqu'à I3 sont intégrés.
 
-## Lot en cours : I3 — Activation contextuelle d'une version
+## Lot en cours : I4 — Export contextuel de la version sélectionnée
 
-Diagnostic confirmé : l'Historique conservait la version sélectionnée mais ne
-proposait aucune action sur elle. `edt_memory.py` savait créer une nouvelle version,
-pas réactiver explicitement une version archivée.
+Diagnostic confirmé : l'Historique cible déjà une version précise, mais ne permettait
+pas de télécharger cette version. L'export existant n'était accessible que dans le
+parcours d'import/correction.
 
-Livrable développé : action sur la version sélectionnée, confirmation en deux temps,
-bouton désactivé avant confirmation, transaction SQLite atomique et retour exact
-sur la nouvelle et l'ancienne version active. La sélection reste sur la version
-activée après relance. Aucune suppression ni réécriture de séance/commentaire.
+Livrable développé : bouton « Télécharger Vn en Excel » dans les actions contextuelles,
+nom `EDT_<emploi>_Vn.xlsx`, deux feuilles existantes et état vide explicite. L'export
+d'une version archivée ne l'active pas et ne crée aucun enregistrement.
 
-Critères : exactement une active après confirmation ; aucune écriture avant celle-ci ;
-appel répété idempotent ; mauvais emploi/version refusé sans mutation ; statuts métier,
-versions, séances et commentaires préservés.
+Critères : V1 et V2 donnent leurs propres séances et noms ; deux feuilles présentes ;
+bouton désactivé sans séance ; sélection, versions et drapeaux actifs inchangés.
 
-État : 62 tests et 15 sous-tests réussis par le responsable ; revue indépendante
-acceptée avec 10 tests ciblés et 62 tests complets. AppTest couvre sélection, verrou de confirmation, activation, retour et
-persistance ; SQLite temporaire couvre transaction et intégrité.
+État : 13 tests ciblés puis 65 tests et 15 sous-tests réussis. Revue indépendante
+acceptée sans blocage. AppTest couvre sélection/état vide ; lecture du classeur et snapshots
+SQLite couvrent contenu exact et absence de mutation.
 
 ## Suite
 
-1. I4 : évaluer l'export contextuel de la version consultée.
-2. D5 : vérifier petit écran, clavier et contraste dans un navigateur réel.
-3. L3 : restauration conservatrice, différée après les besoins interactifs.
+1. D5 : vérifier petit écran, clavier et contraste dans un navigateur réel.
+2. L3 : restauration conservatrice, différée après les besoins interactifs.
 
 Aucune nouvelle dépendance, donnée réelle ou secret. Drive reste désactivé. Pas de
 push direct sur `main`, aucun déploiement, dépôt d'origine exclu.

@@ -71,3 +71,10 @@ Les primitives existantes `sqlite3` (`BEGIN IMMEDIATE`), `st.session_state`, cas
 cocher et bouton Streamlit suffisent. Une bibliothèque de machine à états ou un
 composant de dialogue ajouterait installation et maintenance sans gain démontré sur
 PC modeste. Le retour arrière est le retrait du contrôle et du helper transactionnel.
+
+## 7 octobre 2026 — I4
+
+Les dépendances existantes pandas, XlsxWriter et Streamlit produisent déjà le format
+Excel attendu. Ajouter un moteur de rapport ou une bibliothèque de téléchargement
+augmenterait l'installation et la mémoire sans bénéfice mesuré. Le lot réutilise les
+helpers actuels ; retour arrière limité au bouton et à son helper en lecture seule.

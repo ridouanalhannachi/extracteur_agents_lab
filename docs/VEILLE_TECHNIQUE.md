@@ -85,3 +85,11 @@ Les filtres relèvent de pandas et des widgets Streamlit déjà installés. Une 
 JavaScript ou un moteur de recherche ajouterait poids, maintenance et surface de
 sécurité sans gain mesuré pour quelques dizaines de séances. Le lot reste local,
 réversible et compatible avec les PC modestes.
+
+## 8 octobre 2026 — I6
+
+Aucune nouvelle technologie n'est justifiée. `st.form`, boutons, `session_state`,
+pandas et transactions SQLite couvrent sélection, préparation, annulation et
+confirmation. Une grille ou un composant tiers alourdirait installation, mémoire,
+maintenance et sécurité sans gain mesuré. Retour arrière limité au formulaire et
+au garde-fou transactionnel optionnel du versionnage.

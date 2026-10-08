@@ -209,7 +209,8 @@ def _get_or_create_timetable(conn, academic_year, period, filiere, niveau):
     return int(cur.lastrowid)
 
 def save_timetable_version(details, academic_year, period, filiere, niveau,
-                           comment="Import automatique à l'upload", db_path=DB_PATH):
+                           comment="Import automatique à l'upload", db_path=DB_PATH,
+                           expected_active_version_id=None):
     ensure_edt_memory_db(db_path)
     academic_year = _clean(academic_year)
     period = _clean(period)
@@ -233,6 +234,9 @@ def save_timetable_version(details, academic_year, period, filiere, niveau,
     sources = sorted({_clean(x) for x in frame["Source PDF"].tolist() if _clean(x)})
 
     with sqlite3.connect(db_path) as conn:
+        # Serialize the active-version check and the following version creation.
+        # This prevents a stale editor from replacing a newer active version.
+        conn.execute("BEGIN IMMEDIATE")
         timetable_id = _get_or_create_timetable(conn, academic_year, period, filiere, niveau)
 
         duplicate = conn.execute(
@@ -240,26 +244,46 @@ def save_timetable_version(details, academic_year, period, filiere, niveau,
             "ORDER BY version_number DESC LIMIT 1",
             (timetable_id, source_hash),
         ).fetchone()
-        if duplicate is None:
-            # Older releases hashed the display format of durations. Compare the
-            # stored sessions before creating a new version with a new hash format.
-            candidates = conn.execute(
-                "SELECT id, version_number FROM edt_versions WHERE timetable_id=? "
-                "ORDER BY version_number DESC", (timetable_id,),
-            ).fetchall()
-            for candidate in candidates:
-                stored = pd.read_sql_query('''
-                    SELECT jour AS "Jour", matiere AS "Matière", type_seance AS "Type",
-                           enseignant AS "Nom et prénom", horaire AS "Horaire", duree AS "Durée",
-                           groupe AS "Groupe", salle AS "Salle", filiere AS "Filière",
-                           niveau AS "Niveau", academic_year AS "Année universitaire"
-                    FROM edt_sessions WHERE version_id=? ORDER BY id
-                ''', conn, params=(candidate[0],))
-                if sessions_hash(stored) == source_hash:
-                    duplicate = candidate
-                    conn.execute("UPDATE edt_versions SET source_hash=? WHERE id=?",
-                                 (source_hash, candidate[0]))
-                    break
+        if duplicate:
+            return {
+                "status": "duplicate",
+                "timetable_id": timetable_id,
+                "version_id": int(duplicate[0]),
+                "version_number": int(duplicate[1]),
+                "message": f"Déjà mémorisé : V{int(duplicate[1])}.",
+            }
+
+        if expected_active_version_id is not None:
+            active = conn.execute(
+                "SELECT id FROM edt_versions WHERE timetable_id=? AND is_active=1",
+                (timetable_id,),
+            ).fetchone()
+            active_id = int(active[0]) if active else None
+            if active_id != int(expected_active_version_id):
+                raise RuntimeError(
+                    "La version de départ n’est plus active. Rechargez la console et "
+                    "reprenez la correction sur la version active."
+                )
+
+        # Older releases hashed the display format of durations. Compare the
+        # stored sessions before creating a new version with a new hash format.
+        candidates = conn.execute(
+            "SELECT id, version_number FROM edt_versions WHERE timetable_id=? "
+            "ORDER BY version_number DESC", (timetable_id,),
+        ).fetchall()
+        for candidate in candidates:
+            stored = pd.read_sql_query('''
+                SELECT jour AS "Jour", matiere AS "Matière", type_seance AS "Type",
+                       enseignant AS "Nom et prénom", horaire AS "Horaire", duree AS "Durée",
+                       groupe AS "Groupe", salle AS "Salle", filiere AS "Filière",
+                       niveau AS "Niveau", academic_year AS "Année universitaire"
+                FROM edt_sessions WHERE version_id=? ORDER BY id
+            ''', conn, params=(candidate[0],))
+            if sessions_hash(stored) == source_hash:
+                duplicate = candidate
+                conn.execute("UPDATE edt_versions SET source_hash=? WHERE id=?",
+                             (source_hash, candidate[0]))
+                break
         if duplicate:
             return {
                 "status": "duplicate",

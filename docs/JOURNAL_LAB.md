@@ -283,3 +283,29 @@ Revue indépendante acceptée après ajout de la recherche sans distinction d'ac
 
 Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
 Aucune dépendance ajoutée ; Drive désactivé ; aucun déploiement.
+
+## 2026-10-08 — I6, correction ciblée depuis la Vérification globale
+
+Base distante `5f981ea` (PR nº 12 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/verification-correction`. Diagnostic : la console permettait de choisir,
+noter et marquer une séance « À revoir », mais pas de la corriger.
+
+Changement local : formulaire prérempli pour la séance courante, étape « Correction
+préparée — non enregistrée », diff visible, annulation sans écriture et confirmation
+avant création d'une version. Le mécanisme existant crée une nouvelle version active,
+conserve l'ancienne, déduplique les soumissions identiques et archive les changements.
+Une durée non numérique, non finie ou non positive est refusée. L'échec de
+synchronisation est signalé séparément de la sauvegarde SQLite réussie.
+
+La revue indépendante a reproduit un risque multi-onglet : une correction encore
+fondée sur V1 pouvait créer V3 après qu'une autre action avait créé V2, et perdre les
+changements propres à V2. Le versionnage accepte désormais un identifiant actif
+attendu et sérialise contrôle + création avec `BEGIN IMMEDIATE`. Une base devenue
+inactive est refusée sans mutation ; un contenu déjà existant reste dédupliqué.
+
+Preuves finales responsable : 7 tests ciblés et 6 sous-tests, puis
+`/tmp/edt-i6-venv/bin/python -m pytest -q` — 76 tests et 21 sous-tests en 56,73 s ;
+compilation et `git diff --check` réussis. Revue indépendante acceptée : mêmes tests
+ciblés, 76 tests et 21 sous-tests en 67,87 s, compilation et diff-check réussis.
+Limites : pas de navigateur Windows réel, capture, test mobile ou clavier. Aucune
+dépendance ; Drive désactivé ; aucun déploiement.

@@ -1,28 +1,34 @@
-# Backlog EDT/RH — 7 octobre 2026
+# Backlog EDT/RH — 8 octobre 2026
 
-Base vérifiée : `a59d3cf`, PR 1 à 11 fusionnées, aucune PR ouverte au début du
-cycle. Le socle de fiabilité et les lots interactifs jusqu'à I4 sont intégrés.
+Base vérifiée : `5f981ea`, PR 1 à 12 fusionnées et aucune PR ouverte au début du
+cycle. Les lots interactifs I2 à I5 sont intégrés : ne pas les refaire.
 
-## Lot en cours : I5 — Filtres des séances de la version sélectionnée
+## Lot I6 — Correction ciblée depuis la Vérification globale
 
-Diagnostic confirmé : après sélection de Vn, l'Historique affichait toutes ses séances
-sans recherche, filtres, compteur, réinitialisation ni état zéro filtré.
+Diagnostic confirmé : la console sélectionnait et marquait une séance « À revoir »,
+mais toutes ses cartes étaient en lecture seule. Une erreur exigeait de retrouver le
+document et de recommencer le parcours d'import.
 
-Livrable développé : recherche texte sans distinction d'accents sur matière/enseignant/groupe/salle/horaire,
-filtres Jour/Enseignant/Groupe, compteur résultat/total, réinitialisation et état zéro.
-Les filtres restent propres à chaque Vn lors des allers-retours.
+Livrable développé : bouton « Corriger cette séance », formulaire prérempli,
+préparation locale avec diff explicite, annulation sans écriture et confirmation avant
+« Enregistrer comme nouvelle version ». La correction remplace uniquement la séance
+ciblée dans la nouvelle version ; l'ancienne version et les autres séances restent
+inchangées. Une soumission identique est dédupliquée. Une durée invalide est refusée.
+Un contrôle transactionnel refuse une correction fondée sur une version devenue
+inactive afin de ne pas écraser silencieusement un changement concurrent.
 
-Critères : défaut, filtres individuels/combinés, zéro et reset exacts ; état V1/V2
-isolé ; Excel complet, SQLite et drapeau actif inchangés.
+Critères : préparation en lecture seule, annulation, V1 intacte, V2 active, autre
+séance intacte, doublon sans V3, base obsolète refusée sans mutation, durée invalide
+sans version, échec de synchronisation distingué et parcours AppTest complet.
 
-État : 17 tests ciblés puis 69 tests et 15 sous-tests réussis. Revue indépendante
-acceptée sans blocage après vérification Unicode. AppTest couvre les transitions ; les feuilles Excel et snapshots SQLite
-couvrent l'absence de mutation fonctionnelle.
+État : 7 tests ciblés et 6 sous-tests, puis 76 tests et 21 sous-tests réussis.
+Revue indépendante acceptée après correction des durées non finies et du risque de
+version concurrente. Compilation Python et `git diff --check` réussis.
 
 ## Suite
 
-1. D5 : vérifier petit écran, clavier et contraste dans un navigateur réel.
-2. L3 : restauration conservatrice, différée après les besoins interactifs.
+1. I7 : ouvrir un résultat de recherche dans sa version/séance.
+2. D5 : validation petit écran, clavier et contraste dans un navigateur réel.
+3. L3 : restauration conservatrice après les besoins interactifs.
 
-Aucune nouvelle dépendance, donnée réelle ou secret. Drive reste désactivé. Pas de
-push direct sur `main`, aucun déploiement, dépôt d'origine exclu.
+Aucune dépendance, donnée réelle ou secret. Drive reste désactivé. Aucun déploiement.

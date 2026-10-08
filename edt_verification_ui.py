@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import sqlite3
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ import pandas as pd
 import streamlit as st
 
 from app_config import DB_PATH
+from edt_memory import save_timetable_version
 from edt_persistence_ui import sync_edt_changes
 
 
@@ -54,6 +56,30 @@ STATUS_LABELS = {
     "review": "⚠️ À revoir",
     "pending": "⏳ Non vérifiée",
 }
+
+CORRECTION_FIELDS = (
+    ("jour", "Jour"),
+    ("horaire", "Horaire"),
+    ("matiere", "Matière"),
+    ("enseignant", "Enseignant"),
+    ("type_seance", "Type"),
+    ("groupe", "Groupe"),
+    ("salle", "Salle"),
+    ("duree", "Durée"),
+)
+
+CORRECTION_COLUMNS = {
+    "jour": "Jour",
+    "horaire": "Horaire",
+    "matiere": "Matière",
+    "enseignant": "Nom et prénom",
+    "type_seance": "Type",
+    "groupe": "Groupe",
+    "salle": "Salle",
+    "duree": "Durée",
+}
+
+CORRECTION_FLASH_KEY = "_verification_correction_flash"
 
 
 def _now():
@@ -286,6 +312,257 @@ def _save_status(version_id, session_id, status, note=""):
     sync_edt_changes()
 
 
+def _prepare_corrected_version(version_id, session_id, updates, db_path=None):
+    """Build a new version payload while leaving the stored version untouched."""
+    db_path = DB_PATH if db_path is None else db_path
+    with sqlite3.connect(db_path) as conn:
+        context = conn.execute(
+            """
+            SELECT t.academic_year, t.period, t.filiere, t.niveau
+            FROM edt_versions v
+            JOIN edt_timetables t ON t.id=v.timetable_id
+            WHERE v.id=?
+            """,
+            (int(version_id),),
+        ).fetchone()
+        rows = conn.execute(
+            """
+            SELECT
+                s.id,
+                s.jour AS "Jour",
+                s.matiere AS "Matière",
+                s.type_seance AS "Type",
+                s.enseignant AS "Nom et prénom",
+                s.horaire AS "Horaire",
+                s.duree AS "Durée",
+                s.groupe AS "Groupe",
+                s.salle AS "Salle",
+                s.filiere AS "Filière",
+                s.niveau AS "Niveau",
+                s.academic_year AS "Année universitaire",
+                s.source_document AS "Source PDF",
+                s.page AS "Page"
+            FROM edt_sessions s
+            WHERE s.version_id=?
+            ORDER BY s.id
+            """,
+            (int(version_id),),
+        ).fetchall()
+
+    if context is None:
+        raise ValueError("La version sélectionnée n’existe plus.")
+    if not rows:
+        raise ValueError("La version sélectionnée ne contient aucune séance.")
+
+    columns = [
+        "_session_id", "Jour", "Matière", "Type", "Nom et prénom", "Horaire",
+        "Durée", "Groupe", "Salle", "Filière", "Niveau", "Année universitaire",
+        "Source PDF", "Page",
+    ]
+    frame = pd.DataFrame(rows, columns=columns)
+    matches = frame.index[frame["_session_id"] == int(session_id)].tolist()
+    if len(matches) != 1:
+        raise ValueError("La séance ne correspond pas à la version sélectionnée.")
+
+    row_index = matches[0]
+    changed_fields = []
+    for field, label in CORRECTION_FIELDS:
+        column = CORRECTION_COLUMNS[field]
+        before = _clean(frame.at[row_index, column])
+        after = _clean(updates.get(field, before))
+        if field == "duree" and after:
+            try:
+                duration_value = float(after.replace(",", "."))
+            except ValueError as exc:
+                raise ValueError("La durée doit être un nombre d’heures valide.") from exc
+            if not math.isfinite(duration_value) or duration_value <= 0:
+                raise ValueError("La durée doit être un nombre fini strictement positif.")
+            after = str(duration_value)
+        if after != before:
+            frame.at[row_index, column] = after
+            changed_fields.append({"field": field, "label": label, "before": before, "after": after})
+
+    academic_year, period, filiere, niveau = map(_clean, context)
+    return {
+        "details": frame.drop(columns=["_session_id"]),
+        "academic_year": academic_year,
+        "period": period,
+        "filiere": filiere,
+        "niveau": niveau,
+        "changed_fields": changed_fields,
+    }
+
+
+def _save_session_correction(
+    version_id,
+    session_id,
+    updates,
+    db_path=None,
+    sync_func=None,
+):
+    """Persist an explicit correction as a new version, never in place."""
+    db_path = DB_PATH if db_path is None else db_path
+    sync_func = sync_edt_changes if sync_func is None else sync_func
+    prepared = _prepare_corrected_version(version_id, session_id, updates, db_path)
+    if not prepared["changed_fields"]:
+        return {"status": "no_changes", "changed_fields": []}
+
+    result = save_timetable_version(
+        prepared["details"],
+        prepared["academic_year"],
+        prepared["period"],
+        prepared["filiere"],
+        prepared["niveau"],
+        "Correction depuis la vérification globale",
+        db_path=db_path,
+        expected_active_version_id=int(version_id),
+    )
+    result["changed_fields"] = prepared["changed_fields"]
+    if result.get("status") == "created":
+        sync_ok, sync_message = sync_func()
+        result["sync_ok"] = bool(sync_ok)
+        result["sync_message"] = str(sync_message)
+    return result
+
+
+def _correction_prefix(version_id, session_id):
+    return f"verification_correction_{int(version_id)}_{int(session_id)}"
+
+
+def _clear_correction_state(prefix):
+    for key in list(st.session_state):
+        if key.startswith(prefix):
+            st.session_state.pop(key, None)
+
+
+def _render_session_correction(current):
+    prefix = _correction_prefix(current["version_id"], current["session_id"])
+    open_key = f"{prefix}_open"
+    prepared_key = f"{prefix}_prepared"
+
+    if not st.session_state.get(open_key):
+        if st.button(
+            "✏️ Corriger cette séance",
+            key=f"{prefix}_start",
+            width="stretch",
+            help="Prépare une nouvelle version sans modifier la version affichée.",
+        ):
+            st.session_state[open_key] = True
+            st.rerun()
+        return
+
+    st.markdown("### ✏️ Correction ciblée")
+    st.caption(
+        "Préparez la correction, contrôlez les changements, puis confirmez la création "
+        "d’une nouvelle version. La version actuelle reste intacte."
+    )
+
+    with st.form(f"{prefix}_form"):
+        first = st.columns(2)
+        jour = first[0].text_input("Jour", value=current["jour"], key=f"{prefix}_jour")
+        horaire = first[1].text_input("Horaire", value=current["horaire"], key=f"{prefix}_horaire")
+        matiere = st.text_input("Matière", value=current["matiere"], key=f"{prefix}_matiere")
+        enseignant = st.text_input(
+            "Enseignant", value=current["enseignant"], key=f"{prefix}_enseignant"
+        )
+        second = st.columns(2)
+        type_seance = second[0].text_input(
+            "Type", value=current["type_seance"], key=f"{prefix}_type_seance"
+        )
+        groupe = second[1].text_input("Groupe", value=current["groupe"], key=f"{prefix}_groupe")
+        third = st.columns(2)
+        salle = third[0].text_input("Salle", value=current["salle"], key=f"{prefix}_salle")
+        duree = third[1].text_input("Durée", value=current["duree"], key=f"{prefix}_duree")
+        prepared = st.form_submit_button(
+            "Préparer la correction",
+            type="primary",
+            use_container_width=True,
+        )
+
+    updates = {
+        "jour": jour,
+        "horaire": horaire,
+        "matiere": matiere,
+        "enseignant": enseignant,
+        "type_seance": type_seance,
+        "groupe": groupe,
+        "salle": salle,
+        "duree": duree,
+    }
+    if prepared:
+        changes = []
+        for field, label in CORRECTION_FIELDS:
+            before = _clean(current.get(field))
+            after = _clean(updates[field])
+            if before != after:
+                changes.append({"field": field, "label": label, "before": before, "after": after})
+        if changes:
+            st.session_state[prepared_key] = updates
+        else:
+            st.session_state.pop(prepared_key, None)
+            st.info("Aucune différence à enregistrer pour cette séance.")
+
+    pending = st.session_state.get(prepared_key)
+    if pending:
+        st.warning("Correction préparée — non enregistrée.")
+        for field, label in CORRECTION_FIELDS:
+            before = _clean(current.get(field))
+            after = _clean(pending.get(field))
+            if before != after:
+                st.markdown(f"- **{label}** : {before or '—'} → {after or '—'}")
+
+        confirm_key = f"{prefix}_confirm"
+        confirmed = st.checkbox(
+            "Je confirme la création d’une nouvelle version avec cette correction",
+            key=confirm_key,
+        )
+        action_columns = st.columns(2)
+        if action_columns[0].button(
+            "Annuler la correction",
+            key=f"{prefix}_cancel",
+            use_container_width=True,
+        ):
+            _clear_correction_state(prefix)
+            st.session_state[CORRECTION_FLASH_KEY] = {
+                "kind": "info",
+                "message": "Correction annulée. Aucune version n’a été créée.",
+            }
+            st.rerun()
+        if action_columns[1].button(
+            "💾 Enregistrer comme nouvelle version",
+            key=f"{prefix}_save",
+            type="primary",
+            disabled=not confirmed,
+            use_container_width=True,
+        ):
+            try:
+                result = _save_session_correction(
+                    current["version_id"], current["session_id"], pending
+                )
+                if result["status"] == "created":
+                    message = (
+                        f"Version V{result['version_number']} enregistrée localement et activée. "
+                        "La vérification de cette nouvelle version repart sans statut hérité."
+                    )
+                    kind = "success" if result.get("sync_ok") else "warning"
+                    if not result.get("sync_ok"):
+                        message += " Synchronisation non confirmée : " + result.get("sync_message", "")
+                elif result["status"] == "duplicate":
+                    kind = "info"
+                    message = (
+                        f"Cette correction existe déjà dans V{result['version_number']} ; "
+                        "aucune version supplémentaire n’a été créée."
+                    )
+                else:
+                    kind = "info"
+                    message = "Aucune différence à enregistrer."
+                _clear_correction_state(prefix)
+                st.session_state[CORRECTION_FLASH_KEY] = {"kind": kind, "message": message}
+                st.rerun()
+            except Exception as exc:
+                st.error(f"Correction non enregistrée : {exc}")
+
+
 def _reset_year(academic_year):
     rows = _load_console(academic_year)
     version_ids = sorted({
@@ -468,6 +745,11 @@ def render_global_verification():
     rows = _load_console(selected_year)
     sessions = _ordered_sessions(rows)
 
+    correction_flash = st.session_state.pop(CORRECTION_FLASH_KEY, None)
+    if correction_flash:
+        renderer = getattr(st, correction_flash.get("kind", "info"), st.info)
+        renderer(correction_flash.get("message", ""))
+
     if not sessions:
         st.warning("Aucune séance disponible pour l'année sélectionnée.")
         _render_program_overview(rows, selected_year)
@@ -588,6 +870,8 @@ def render_global_verification():
 
     if missing_fields:
         st.error("⚠️ Champs essentiels manquants : " + ", ".join(missing_fields))
+
+    _render_session_correction(current)
 
     note_key = _note_key(selected_year, current["session_id"])
     if note_key not in st.session_state:

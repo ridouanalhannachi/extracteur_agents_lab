@@ -1,13 +1,14 @@
-# Relais EDT/RH — I5
+# Relais EDT/RH — I6
 
-- Lot : filtres réactifs des séances de la version sélectionnée.
-- Branche : `lab/session-filters` ; base `a59d3cf32e0d994213b65369b59ce33cf40ce929`.
-- État : vérifié ; 69 tests et 15 sous-tests réussis ; revue indépendante acceptée.
-- Diagnostic confirmé : tableau complet sans recherche, compteur ni reset.
-- Changements : recherche, Jour/Enseignant/Groupe, compteur, reset, zéro ; état isolé Vn.
-- Fichiers : edt_history_ui.py, tests/test_version_session_filters.py et cinq documents.
-- Preuve : `/tmp/edt-i5-final/bin/python -m pytest -q` — 69 tests et 15 sous-tests.
-- Limites : AppTest, pas de navigateur/mobile/clavier réel ni capture avant/après.
-- Inachevé : commit/push/PR,
-  contrôles SHA/protections puis fusion conditionnelle autorisée. Aucun déploiement.
-- Suite : D5 si un navigateur utilisable permet la validation ; sinon diagnostic L3 séparé.
+- Lot : correction ciblée depuis la Vérification globale.
+- Branche : `lab/verification-correction` ; base `5f981eaff9222d9853f9853845bbb57aed45143d`.
+- État : vérifié ; 76 tests et 21 sous-tests ; revue indépendante acceptée.
+- Diagnostic : séance sélectionnée et marquée « À revoir », mais non modifiable.
+- Changements : formulaire prérempli, préparation locale, diff, annulation, confirmation,
+  nouvelle version dédupliquée ; durée invalide et base obsolète refusées.
+- Fichiers : `edt_memory.py`, `edt_verification_ui.py`, test I6 et cinq documents.
+- Preuve : `/tmp/edt-i6-venv/bin/python -m pytest -q` — 76 tests, 21 sous-tests.
+- Invariants : V1 et autres séances intactes ; Drive désactivé ; aucun déploiement.
+- Limite : AppTest, pas de navigateur Windows/mobile/clavier réel ni capture.
+- Inachevé : commit/push/PR et fusion contrôlée.
+- Suite : terminer I6 ; ne pas ouvrir I7 avant publication/fusion.

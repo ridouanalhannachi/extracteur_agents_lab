@@ -242,3 +242,23 @@ tests ciblés, 62 tests complets en 14,629 s, rollback sur panne injectée et
 
 Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
 Aucune dépendance projet ajoutée ; Drive reste désactivé ; aucun déploiement.
+
+## 2026-10-07 — I4, export contextuel de la version sélectionnée
+
+Base distante `b41b044` (PR nº 10 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/version-export`. Diagnostic : l'Historique sélectionnait une version
+précise sans permettre son export ; le générateur Excel existait déjà.
+
+Changement local : bouton « Télécharger Vn en Excel », fichier nommé avec emploi et
+version, feuilles `Intervenants` et `Séances détaillées`, état vide explicite et
+légende lecture seule. L'export utilise l'identifiant sélectionné, y compris pour une
+version archivée, sans activation ni enregistrement.
+
+Preuve responsable après correction de robustesse : 13 tests ciblés, puis
+`/tmp/edt-i4-final/bin/python -m pytest -q` — 65 tests et 15 sous-tests réussis en
+18,02 s. Les tests relisent V1/V2, dérivent le nom depuis SQLite, refusent un identifiant
+absent et comparent les snapshots. Revue indépendante acceptée : mêmes 13 tests
+ciblés, 65 tests et 15 sous-tests en 20,45 s, `git diff --check` réussi et aucun blocage.
+
+Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
+Aucune dépendance ajoutée ; Drive désactivé ; aucun déploiement.

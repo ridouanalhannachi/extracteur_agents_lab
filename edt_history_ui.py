@@ -7,7 +7,8 @@ import pandas as pd
 import streamlit as st
 
 from app_config import DB_PATH
-from edt_memory import activate_timetable_version
+from edt_memory import activate_timetable_version, load_version_sessions
+from edt_parser import build_intervenants_dataframe, xlsx_bytes
 
 
 HISTORY_FILTERS = (
@@ -367,6 +368,28 @@ def _render_version(version):
     _render_change_block(version_id, version_number)
 
 
+def _build_version_export(version_id, db_path=DB_PATH):
+    """Build the stored version's read-only workbook and database-derived name."""
+    with sqlite3.connect(db_path) as conn:
+        if not _table_exists(conn, "edt_versions"):
+            raise ValueError("Version introuvable : export impossible.")
+        version = conn.execute(
+            "SELECT timetable_id, version_number FROM edt_versions WHERE id=?",
+            (int(version_id),),
+        ).fetchone()
+    if version is None:
+        raise ValueError("Version introuvable : export impossible.")
+
+    timetable_id, version_number = map(int, version)
+    sessions = load_version_sessions(version_id, db_path=db_path)
+    export_name = f"EDT_{timetable_id}_V{version_number}.xlsx"
+    if sessions.empty:
+        return sessions, b"", export_name
+
+    intervenants = build_intervenants_dataframe(sessions.to_dict("records"))
+    return sessions, xlsx_bytes(intervenants, sessions), export_name
+
+
 def _render_version_action(timetable_id, version, active_version_number):
     """Render the explicit, contextual activation control for one version."""
     version_id = int(version["id"])
@@ -376,6 +399,35 @@ def _render_version_action(timetable_id, version, active_version_number):
     st.markdown("#### Action sur la version sélectionnée")
     state_label = "Active" if is_active else "Archivée"
     st.info(f"V{version_number} sélectionnée — {state_label}")
+
+    export_failed = False
+    try:
+        sessions, export_data, export_name = _build_version_export(
+            version_id,
+            db_path=DB_PATH,
+        )
+    except (ValueError, sqlite3.Error) as exc:
+        export_failed = True
+        sessions = pd.DataFrame()
+        export_data = b""
+        export_name = f"EDT_version_{version_id}.xlsx"
+        st.error(f"Export impossible : {exc}")
+    if sessions.empty and not export_failed:
+        st.warning("Aucune séance à télécharger pour cette version.")
+
+    st.download_button(
+        f"Télécharger V{version_number} en Excel",
+        data=export_data,
+        file_name=export_name,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        key=f"history_download_version_{timetable_id}_{version_id}",
+        disabled=sessions.empty,
+        use_container_width=True,
+    )
+    st.caption(
+        "Le téléchargement est une copie en lecture seule : il n’active pas la version "
+        "et n’enregistre aucune modification."
+    )
 
     flash_key = f"history_version_action_flash_{timetable_id}"
     flash = st.session_state.pop(flash_key, None)

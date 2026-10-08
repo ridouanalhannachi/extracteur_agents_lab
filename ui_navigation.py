@@ -15,10 +15,23 @@ MODULES = (
     "☁️ Google Drive",
 )
 
+HISTORY_SESSION_INTENT_KEY = "history_session_open_intent"
+HISTORY_SESSION_FOCUS_KEY = "history_session_focus"
+
 
 def open_module(module):
     # Callbacks run before the radio is instantiated on the next rerun.
     st.session_state["main_module"] = module
+
+
+def open_history_session(timetable_id, version_id, session_id):
+    """Queue one read-only session target, then switch to History."""
+    st.session_state[HISTORY_SESSION_INTENT_KEY] = {
+        "timetable_id": int(timetable_id),
+        "version_id": int(version_id),
+        "session_id": int(session_id),
+    }
+    open_module(MODULES[5])
 
 
 def render_navigation():

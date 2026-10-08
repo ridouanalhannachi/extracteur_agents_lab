@@ -93,3 +93,12 @@ pandas et transactions SQLite couvrent sélection, préparation, annulation et
 confirmation. Une grille ou un composant tiers alourdirait installation, mémoire,
 maintenance et sécurité sans gain mesuré. Retour arrière limité au formulaire et
 au garde-fou transactionnel optionnel du versionnage.
+
+## 8 octobre 2026 — I7
+
+Aucune nouvelle technologie n'est justifiée. Les identifiants déjà chargés,
+`st.session_state`, la navigation existante et une jointure SQLite en lecture seule
+suffisent à ouvrir le bon contexte. Une grille tierce ou un routeur ajouterait poids,
+maintenance et risque de collisions sans bénéfice mesuré sur PC modeste. Le retour
+arrière consiste à retirer le bouton, le helper et deux clés de session ; aucune
+migration ni donnée enregistrée n'est concernée.

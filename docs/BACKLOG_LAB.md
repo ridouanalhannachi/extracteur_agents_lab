@@ -1,33 +1,34 @@
 # Backlog EDT/RH — 8 octobre 2026
 
-Base vérifiée : `5f981ea`, PR 1 à 12 fusionnées et aucune PR ouverte au début du
-cycle. Les lots interactifs I2 à I5 sont intégrés : ne pas les refaire.
+Base vérifiée : `0bdf629`, PR 1 à 13 fusionnées et aucune PR ouverte au début du
+cycle. Les lots interactifs I2 à I6 sont intégrés : ne pas les refaire.
 
-## Lot I6 — Correction ciblée depuis la Vérification globale
+## Lot I7 — Ouvrir une séance trouvée dans son contexte
 
-Diagnostic confirmé : la console sélectionnait et marquait une séance « À revoir »,
-mais toutes ses cartes étaient en lecture seule. Une erreur exigeait de retrouver le
-document et de recommencer le parcours d'import.
+Diagnostic confirmé : la Recherche globale trouvait les séances et connaissait déjà
+leurs identifiants d'emploi, version et séance, mais n'offrait aucune action vers
+l'Historique. L'utilisateur devait retrouver manuellement la bonne version.
 
-Livrable développé : bouton « Corriger cette séance », formulaire prérempli,
-préparation locale avec diff explicite, annulation sans écriture et confirmation avant
-« Enregistrer comme nouvelle version ». La correction remplace uniquement la séance
-ciblée dans la nouvelle version ; l'ancienne version et les autres séances restent
-inchangées. Une soumission identique est dédupliquée. Une durée invalide est refusée.
-Un contrôle transactionnel refuse une correction fondée sur une version devenue
-inactive afin de ne pas écraser silencieusement un changement concurrent.
+Livrable développé : sélection native d'une séance trouvée et bouton « Ouvrir dans
+l'historique ». La transition transmet uniquement les trois identifiants, les valide
+par jointure SQLite, ouvre l'emploi et la version exacts — y compris archivés — puis
+marque la séance avec une ligne dédiée. L'intention est consommée une fois ; le focus
+reste présent aux réexécutions jusqu'à « Afficher toutes les séances ». Une cible
+supprimée ou incohérente est refusée sans afficher un contexte trompeur.
 
-Critères : préparation en lecture seule, annulation, V1 intacte, V2 active, autre
-séance intacte, doublon sans V3, base obsolète refusée sans mutation, durée invalide
-sans version, échec de synchronisation distingué et parcours AppTest complet.
+Critères : V1 archivée exacte ouverte malgré V2 active, libellés identiques séparés
+par IDs, focus conservé après rerun puis effaçable, filtres des autres versions
+préservés, erreur explicite et snapshot SQLite identique.
 
-État : 7 tests ciblés et 6 sous-tests, puis 76 tests et 21 sous-tests réussis.
-Revue indépendante acceptée après correction des durées non finies et du risque de
-version concurrente. Compilation Python et `git diff --check` réussis.
+État final : 16 tests ciblés puis 81 tests et 21 sous-tests réussis ;
+`git diff --check` et compilation réussis. La revue indépendante a d'abord relevé
+des libellés ambigus pour deux séances du même créneau. Enseignant, groupe et salle
+ont été ajoutés ; un AppTest sélectionne désormais la bonne séance parmi deux cas
+semblables. Revue finale acceptée sur l'arbre corrigé.
 
 ## Suite
 
-1. I7 : ouvrir un résultat de recherche dans sa version/séance.
+1. I8 : diagnostiquer l'ouverture contextuelle des résultats Version/Changement.
 2. D5 : validation petit écran, clavier et contraste dans un navigateur réel.
 3. L3 : restauration conservatrice après les besoins interactifs.
 

@@ -9,6 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from app_config import DB_PATH
+from ui_navigation import open_history_session
 
 
 STOP_WORDS = {
@@ -389,6 +390,56 @@ def _display_sessions(frame):
     st.dataframe(out, width="stretch", hide_index=True)
 
 
+def _session_result_label(row):
+    """Readable label for the native result selector; identifiers stay internal."""
+    context = [
+        f'Ens. {value}' if (value := _clean(row.get("enseignant"))) else "",
+        f'Groupe {value}' if (value := _clean(row.get("groupe"))) else "",
+        f'Salle {value}' if (value := _clean(row.get("salle"))) else "",
+        " ".join(
+            value for value in (
+                _clean(row.get("filiere")),
+                _clean(row.get("niveau")),
+            ) if value
+        ),
+        f'V{int(row.get("version_number"))}',
+    ]
+    return (
+        f'{_clean(row.get("matiere")) or "Séance"} — '
+        f'{_clean(row.get("jour"))} {_clean(row.get("horaire"))} | '
+        + " | ".join(value for value in context if value)
+    )
+
+
+def _render_session_history_action(frame):
+    """Select one result and queue its exact stored context for History."""
+    if frame.empty:
+        return
+
+    rows = {
+        int(row["session_id"]): row
+        for _, row in frame.iterrows()
+    }
+    selected_session_id = st.selectbox(
+        "Séance trouvée",
+        list(rows),
+        format_func=lambda session_id: _session_result_label(rows[session_id]),
+        key="global_edt_search_selected_session",
+    )
+    selected = rows[int(selected_session_id)]
+    st.button(
+        "Ouvrir dans l’historique",
+        key="global_edt_search_open_history",
+        type="primary",
+        on_click=open_history_session,
+        args=(
+            int(selected["timetable_id"]),
+            int(selected["version_id"]),
+            int(selected["session_id"]),
+        ),
+    )
+
+
 def _display_versions(frame):
     if frame.empty:
         st.info("Aucune version trouvée.")
@@ -548,6 +599,7 @@ def render_global_edt_search():
 
     with tab1:
         _display_sessions(sessions)
+        _render_session_history_action(sessions)
 
     with tab2:
         _display_versions(versions)

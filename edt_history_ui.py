@@ -10,6 +10,7 @@ import streamlit as st
 from app_config import DB_PATH
 from edt_memory import activate_timetable_version, load_version_sessions
 from edt_parser import build_intervenants_dataframe, xlsx_bytes
+from ui_navigation import HISTORY_SESSION_FOCUS_KEY, HISTORY_SESSION_INTENT_KEY
 
 
 HISTORY_FILTERS = (
@@ -24,6 +25,98 @@ VERSION_SESSION_SELECT_FILTERS = (
     ("Enseignant", "teacher"),
     ("Groupe", "group"),
 )
+
+INVALID_SESSION_TARGET_MESSAGE = (
+    "Impossible d’ouvrir cette séance : la cible demandée n’existe pas ou "
+    "n’appartient pas à cette version. Aucun contexte de recherche n’a été ouvert."
+)
+
+
+def _validate_session_target(intent, db_path=DB_PATH):
+    """Resolve a three-ID target only when all relations still match SQLite."""
+    try:
+        timetable_id = int(intent["timetable_id"])
+        version_id = int(intent["version_id"])
+        session_id = int(intent["session_id"])
+    except (KeyError, TypeError, ValueError):
+        return None, INVALID_SESSION_TARGET_MESSAGE
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            version_columns = _columns(conn, "edt_versions")
+            active_expr = "v.is_active" if "is_active" in version_columns else "0"
+            row = conn.execute(
+                f'''
+                SELECT
+                    t.id,
+                    v.id,
+                    s.id,
+                    v.version_number,
+                    {active_expr},
+                    s.jour,
+                    s.horaire,
+                    s.matiere,
+                    s.type_seance,
+                    s.enseignant,
+                    s.groupe,
+                    s.salle,
+                    s.duree,
+                    s.source_document,
+                    s.page
+                FROM edt_sessions s
+                JOIN edt_versions v ON v.id=s.version_id
+                JOIN edt_timetables t ON t.id=v.timetable_id
+                WHERE t.id=? AND v.id=? AND s.id=?
+                ''',
+                (timetable_id, version_id, session_id),
+            ).fetchone()
+    except sqlite3.Error:
+        row = None
+
+    if row is None:
+        return None, INVALID_SESSION_TARGET_MESSAGE
+
+    columns = (
+        "timetable_id", "version_id", "session_id", "version_number",
+        "is_active", "Jour", "Horaire", "Matière", "Type", "Enseignant",
+        "Groupe", "Salle", "Durée", "Document source", "Page",
+    )
+    return dict(zip(columns, row)), None
+
+
+def _session_target_ids(target):
+    """Return the only values allowed in navigation/focus state."""
+    return {
+        "timetable_id": int(target["timetable_id"]),
+        "version_id": int(target["version_id"]),
+        "session_id": int(target["session_id"]),
+    }
+
+
+def _consume_session_open_intent(state=None, db_path=DB_PATH):
+    """Consume and validate the one-shot Search-to-History navigation target."""
+    target = st.session_state if state is None else state
+    intent = target.pop(HISTORY_SESSION_INTENT_KEY, None)
+    if intent is None:
+        return None, None
+    return _validate_session_target(intent, db_path)
+
+
+def _load_session_focus(state=None, db_path=DB_PATH):
+    """Revalidate the persistent read-only focus on every History render."""
+    target = st.session_state if state is None else state
+    focus = target.get(HISTORY_SESSION_FOCUS_KEY)
+    if focus is None:
+        return None, None
+    resolved, error = _validate_session_target(focus, db_path)
+    if error:
+        target.pop(HISTORY_SESSION_FOCUS_KEY, None)
+    return resolved, error
+
+
+def _clear_session_focus(state=None):
+    target = st.session_state if state is None else state
+    target.pop(HISTORY_SESSION_FOCUS_KEY, None)
 
 
 def _filter_history_catalog(memory, selections):
@@ -202,6 +295,7 @@ def _load_sessions(version_id):
         return pd.read_sql_query(
             '''
             SELECT
+                id AS "_session_id",
                 jour AS "Jour",
                 horaire AS "Horaire",
                 matiere AS "Matière",
@@ -411,7 +505,12 @@ def _render_change_block(version_id, version_number):
             st.dataframe(part, use_container_width=True, hide_index=True)
 
 
-def _render_version(version, timetable_id=None, enable_session_filters=False):
+def _render_version(
+    version,
+    timetable_id=None,
+    enable_session_filters=False,
+    target_session=None,
+):
     version_id = int(version["id"])
     version_number = int(version["version_number"])
     is_active = bool(int(version.get("is_active", 0) or 0))
@@ -445,6 +544,38 @@ def _render_version(version, timetable_id=None, enable_session_filters=False):
     if sessions.empty:
         st.warning("Aucune séance enregistrée pour cette version.")
     else:
+        display_columns = [
+            column for column in sessions.columns if column != "_session_id"
+        ]
+        if target_session is not None:
+            target_rows = sessions[
+                sessions["_session_id"] == int(target_session["session_id"])
+            ]
+            if not target_rows.empty:
+                state_label = (
+                    "active" if int(target_session.get("is_active", 0) or 0)
+                    else "archivée"
+                )
+                st.success(
+                    f'Séance recherchée ouverte dans V{version_number} ({state_label}).'
+                )
+                highlighted = target_rows[display_columns].copy()
+                highlighted.insert(0, "Cible", "🎯 Séance recherchée")
+                st.dataframe(
+                    highlighted,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.button(
+                    "Afficher toutes les séances",
+                    key="history_clear_session_focus",
+                    on_click=_clear_session_focus,
+                    help=(
+                        "Quitte le focus sur cette séance sans modifier les filtres "
+                        "mémorisés ni les données enregistrées."
+                    ),
+                )
+
         displayed_sessions = sessions
         if enable_session_filters:
             keys = _version_session_filter_keys(timetable_id, version_id)
@@ -507,7 +638,11 @@ def _render_version(version, timetable_id=None, enable_session_filters=False):
                 "Modifiez la recherche ou réinitialisez les filtres des séances."
             )
         else:
-            st.dataframe(displayed_sessions, use_container_width=True, hide_index=True)
+            st.dataframe(
+                displayed_sessions[display_columns],
+                use_container_width=True,
+                hide_index=True,
+            )
 
     _render_change_block(version_id, version_number)
 
@@ -639,6 +774,18 @@ def render_edt_history():
         st.info("Aucun emploi du temps mémorisé dans estn.db.")
         return
 
+    target_session, target_error = _consume_session_open_intent(db_path=DB_PATH)
+    if target_session is not None:
+        st.session_state[HISTORY_SESSION_FOCUS_KEY] = _session_target_ids(
+            target_session
+        )
+    elif target_error is None:
+        target_session, target_error = _load_session_focus(db_path=DB_PATH)
+    if target_error:
+        st.session_state.pop(HISTORY_SESSION_FOCUS_KEY, None)
+        st.error(target_error)
+        return
+
     total_versions = int(memory["Nombre de versions"].fillna(0).sum())
 
     with sqlite3.connect(DB_PATH) as conn:
@@ -691,7 +838,19 @@ def render_edt_history():
     )
 
     filtered = _filter_history_catalog(memory, selections)
-    result_status.caption(f"**{len(filtered)} résultat(s) sur {len(memory)} emploi(s)**")
+    filtered_count = len(filtered)
+    target_outside_filters = False
+    if target_session is not None:
+        target_catalog = memory[
+            memory["id"] == int(target_session["timetable_id"])
+        ]
+        if not filtered["id"].eq(int(target_session["timetable_id"])).any():
+            target_outside_filters = True
+            filtered = pd.concat([target_catalog, filtered], ignore_index=True)
+    result_summary = f"**{filtered_count} résultat(s) sur {len(memory)} emploi(s)**"
+    if target_outside_filters:
+        result_summary += " · La cible ouverte est affichée en plus."
+    result_status.caption(result_summary)
 
     title = "### 📚 Emplois correspondant aux filtres" if filters_active else "### 📚 Tous les emplois mémorisés"
     st.markdown(title)
@@ -715,6 +874,13 @@ def render_edt_history():
             f'{row["Filière"]} | {row["Semestre"]} | active {active_text}'
         )
         labels[label] = int(row["id"])
+
+    if target_session is not None:
+        target_label = next(
+            label for label, identifier in labels.items()
+            if identifier == int(target_session["timetable_id"])
+        )
+        st.session_state["history_timetable"] = target_label
 
     selected_timetable_label = st.selectbox(
         "Choisir un emploi",
@@ -740,6 +906,8 @@ def render_edt_history():
     button_columns = st.columns(min(5, max(1, len(version_records))))
 
     session_key = f"edt_history_selected_version_{timetable_id}"
+    if target_session is not None:
+        st.session_state[session_key] = int(target_session["version_id"])
     if session_key not in st.session_state:
         active_rows = [
             row for row in version_records
@@ -787,6 +955,7 @@ def render_edt_history():
         selected_version,
         timetable_id=timetable_id,
         enable_session_filters=True,
+        target_session=target_session,
     )
 
     st.divider()

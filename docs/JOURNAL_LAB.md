@@ -309,3 +309,31 @@ compilation et `git diff --check` réussis. Revue indépendante acceptée : mêm
 ciblés, 76 tests et 21 sous-tests en 67,87 s, compilation et diff-check réussis.
 Limites : pas de navigateur Windows réel, capture, test mobile ou clavier. Aucune
 dépendance ; Drive désactivé ; aucun déploiement.
+
+## 2026-10-08 — I7, ouverture contextuelle d'une séance trouvée
+
+Base distante `0bdf629` (PR nº 13 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/search-result-context`. Diagnostic : la Recherche globale exposait déjà
+les identifiants de séance, version et emploi, mais seulement dans un tableau sans
+action vers l'Historique.
+
+Changement local : sélecteur natif des séances trouvées et bouton « Ouvrir dans
+l'historique ». La cible transporte uniquement les trois IDs, est validée par jointure
+SQLite et ouvre l'emploi et la version exacts, même archivés. Une ligne dédiée marque
+la séance. L'intention de navigation est consommée une fois ; le focus reste conservé
+aux reruns, est revalidé à chaque affichage et peut être quitté explicitement. Une
+cible absente ou croisée entre versions est refusée sans faux contexte.
+
+Preuves responsable finales : 16 tests ciblés en 5,175 s ; puis `.venv/bin/python -m
+pytest -q` — 81 tests et 21 sous-tests en 15,81 s. AppTest couvre V1 archivée alors que V2
+est active, persistance puis effacement du focus, filtres d'une autre version et
+erreur de cible. Snapshot SQLite avant/après identique ; `git diff --check` réussi.
+
+Organisation : Pilote et Éclaireur distincts ; aucune dépendance justifiée. Le
+développeur a corrigé après revue responsable la perte initiale du focus au rerun.
+La revue indépendante a ensuite détecté des libellés identiques pour deux séances
+distinctes au même créneau ; l'ajout enseignant/groupe/salle et un AppTest de sélection
+exacte ont levé la réserve. Revue finale : 16 tests ciblés en 5,75 s, puis 81 tests et
+21 sous-tests en 16,76 s, compilation et diff-check réussis. Limite : aucun navigateur
+Windows réel, capture, petit écran ou navigation clavier. Drive désactivé ; aucun
+déploiement.

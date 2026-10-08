@@ -78,3 +78,10 @@ Les dépendances existantes pandas, XlsxWriter et Streamlit produisent déjà le
 Excel attendu. Ajouter un moteur de rapport ou une bibliothèque de téléchargement
 augmenterait l'installation et la mémoire sans bénéfice mesuré. Le lot réutilise les
 helpers actuels ; retour arrière limité au bouton et à son helper en lecture seule.
+
+## 8 octobre 2026 — I5
+
+Les filtres relèvent de pandas et des widgets Streamlit déjà installés. Une grille
+JavaScript ou un moteur de recherche ajouterait poids, maintenance et surface de
+sécurité sans gain mesuré pour quelques dizaines de séances. Le lot reste local,
+réversible et compatible avec les PC modestes.

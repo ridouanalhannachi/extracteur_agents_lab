@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import unicodedata
 
 import pandas as pd
 import streamlit as st
@@ -16,6 +17,12 @@ HISTORY_FILTERS = (
     ("Période", "history_period"),
     ("Filière", "history_filiere"),
     ("Semestre", "history_semester"),
+)
+
+VERSION_SESSION_SELECT_FILTERS = (
+    ("Jour", "day"),
+    ("Enseignant", "teacher"),
+    ("Groupe", "group"),
 )
 
 
@@ -33,6 +40,81 @@ def _reset_history_filters(state=None):
     target = st.session_state if state is None else state
     for _column, key in HISTORY_FILTERS:
         target[key] = "Tous"
+
+
+def _version_session_filter_keys(timetable_id, version_id):
+    """Return widget keys isolated to one timetable version."""
+    prefix = f"history_session_filter_{int(timetable_id)}_{int(version_id)}"
+    return {
+        "search": f"{prefix}_search",
+        "day": f"{prefix}_day",
+        "teacher": f"{prefix}_teacher",
+        "group": f"{prefix}_group",
+    }
+
+
+def _reset_version_session_filters(timetable_id, version_id, state=None):
+    """Reset only the filters belonging to the selected stored version."""
+    target = st.session_state if state is None else state
+    keys = _version_session_filter_keys(timetable_id, version_id)
+    target[keys["search"]] = ""
+    for name in ("day", "teacher", "group"):
+        target[keys[name]] = "Tous"
+
+
+def _preserve_version_session_filters(timetable_id, version_ids, state=None):
+    """Keep inactive versions' widget values across Streamlit reruns."""
+    target = st.session_state if state is None else state
+    for version_id in version_ids:
+        for key in _version_session_filter_keys(timetable_id, version_id).values():
+            if key in target:
+                # Reassigning a widget key interrupts Streamlit's cleanup when
+                # that version's controls are intentionally not rendered.
+                target[key] = target[key]
+
+
+def _filter_version_sessions(
+    sessions,
+    search="",
+    day="Tous",
+    teacher="Tous",
+    group="Tous",
+):
+    """Filter displayed sessions without mutating the stored dataframe."""
+    filtered = sessions.copy()
+    selected = {
+        "Jour": day,
+        "Enseignant": teacher,
+        "Groupe": group,
+    }
+    for column, value in selected.items():
+        if value != "Tous" and column in filtered.columns:
+            filtered = filtered[filtered[column].fillna("").astype(str) == str(value)]
+
+    def search_key(value):
+        normalized = unicodedata.normalize("NFKD", str(value or "").casefold())
+        return "".join(char for char in normalized if not unicodedata.combining(char))
+
+    query = search_key(search).strip()
+    if query:
+        searchable = [
+            column
+            for column in ("Matière", "Enseignant", "Groupe", "Salle", "Horaire")
+            if column in filtered.columns
+        ]
+        if not searchable:
+            return filtered.iloc[0:0].copy()
+        matches = pd.Series(False, index=filtered.index)
+        for column in searchable:
+            matches |= (
+                filtered[column]
+                .fillna("")
+                .astype(str)
+                .map(search_key)
+                .str.contains(query, regex=False)
+            )
+        filtered = filtered[matches]
+    return filtered.copy()
 
 
 def _table_exists(conn, name):
@@ -329,7 +411,7 @@ def _render_change_block(version_id, version_number):
             st.dataframe(part, use_container_width=True, hide_index=True)
 
 
-def _render_version(version):
+def _render_version(version, timetable_id=None, enable_session_filters=False):
     version_id = int(version["id"])
     version_number = int(version["version_number"])
     is_active = bool(int(version.get("is_active", 0) or 0))
@@ -363,7 +445,69 @@ def _render_version(version):
     if sessions.empty:
         st.warning("Aucune séance enregistrée pour cette version.")
     else:
-        st.dataframe(sessions, use_container_width=True, hide_index=True)
+        displayed_sessions = sessions
+        if enable_session_filters:
+            keys = _version_session_filter_keys(timetable_id, version_id)
+            st.markdown(f"##### Filtrer les séances de V{version_number}")
+            search = st.text_input(
+                "Rechercher une matière, un enseignant, un groupe, une salle ou un horaire",
+                key=keys["search"],
+                placeholder="Ex. Algorithmique, G1, A12 ou 08:30",
+            )
+
+            select_columns = st.columns(3)
+            selections = {}
+            for container, (column, name) in zip(
+                select_columns,
+                VERSION_SESSION_SELECT_FILTERS,
+            ):
+                values = sorted(
+                    {
+                        str(value).strip()
+                        for value in sessions[column].fillna("").tolist()
+                        if str(value).strip()
+                    }
+                )
+                selections[name] = container.selectbox(
+                    column,
+                    ["Tous", *values],
+                    key=keys[name],
+                )
+
+            displayed_sessions = _filter_version_sessions(
+                sessions,
+                search=search,
+                day=selections["day"],
+                teacher=selections["teacher"],
+                group=selections["group"],
+            )
+            filters_active = bool(str(search).strip()) or any(
+                value != "Tous" for value in selections.values()
+            )
+            reset_column, count_column = st.columns([1, 2])
+            reset_column.button(
+                "Réinitialiser les filtres des séances",
+                key=f"history_session_filter_reset_{timetable_id}_{version_id}",
+                disabled=not filters_active,
+                on_click=_reset_version_session_filters,
+                args=(timetable_id, version_id),
+                use_container_width=True,
+            )
+            count_column.caption(
+                f"**{len(displayed_sessions)} séance(s) affichée(s) sur {len(sessions)}**"
+            )
+            st.caption(
+                "Ces filtres modifient uniquement le tableau affiché. "
+                "Le téléchargement Excel conserve toutes les séances de la version."
+            )
+
+        if displayed_sessions.empty:
+            st.warning(
+                "Aucune séance ne correspond aux filtres. "
+                "Modifiez la recherche ou réinitialisez les filtres des séances."
+            )
+        else:
+            st.dataframe(displayed_sessions, use_container_width=True, hide_index=True)
 
     _render_change_block(version_id, version_number)
 
@@ -589,6 +733,10 @@ def render_edt_history():
     st.caption("Cliquez sur une version pour afficher son emploi complet et les modifications apportées.")
 
     version_records = versions.to_dict("records")
+    _preserve_version_session_filters(
+        timetable_id,
+        [int(version["id"]) for version in version_records],
+    )
     button_columns = st.columns(min(5, max(1, len(version_records))))
 
     session_key = f"edt_history_selected_version_{timetable_id}"
@@ -635,7 +783,11 @@ def render_edt_history():
 
     st.divider()
     _render_version_action(timetable_id, selected_version, active_version_number)
-    _render_version(selected_version)
+    _render_version(
+        selected_version,
+        timetable_id=timetable_id,
+        enable_session_filters=True,
+    )
 
     st.divider()
     show_all = st.checkbox(

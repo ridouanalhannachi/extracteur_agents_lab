@@ -262,3 +262,24 @@ ciblés, 65 tests et 15 sous-tests en 20,45 s, `git diff --check` réussi et auc
 
 Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
 Aucune dépendance ajoutée ; Drive désactivé ; aucun déploiement.
+
+## 2026-10-08 — I5, filtres des séances d'une version
+
+Base distante `a59d3cf` (PR nº 11 fusionnée), aucune PR ouverte au démarrage.
+Branche `lab/session-filters`. Diagnostic : la version choisie affichait toutes ses
+séances sans recherche, filtres, compteur ou réinitialisation.
+
+Changement local : recherche matière/enseignant/groupe/salle/horaire tolérant les accents, sélections
+Jour/Enseignant/Groupe, compteur, reset et état zéro. Les clés sont isolées par
+emploi/version et conservées lors des allers-retours. Les vues « Toutes les versions »
+restent sans contrôles dupliqués. L'Excel conserve toutes les séances.
+
+Preuve responsable : 17 tests ciblés, puis `/tmp/edt-i5-final/bin/python -m pytest -q`
+— 69 tests et 15 sous-tests réussis en 11,87 s. Les tests couvrent filtres combinés,
+zéro/reset, isolation V1/V2, contenu Excel complet et snapshot SQLite. La comparaison
+porte sur les feuilles, car les octets XLSX contiennent un horodatage interne.
+Revue indépendante acceptée après ajout de la recherche sans distinction d'accents :
+4 tests ciblés, 69 tests complets, compilation et `git diff --check` réussis.
+
+Limites : aucun navigateur réel, capture visuelle, validation mobile ou clavier.
+Aucune dépendance ajoutée ; Drive désactivé ; aucun déploiement.

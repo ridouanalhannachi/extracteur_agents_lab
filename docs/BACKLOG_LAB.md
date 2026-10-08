@@ -1,24 +1,23 @@
 # Backlog EDT/RH — 7 octobre 2026
 
-Base vérifiée : `b41b044`, PR 1 à 10 fusionnées, aucune PR ouverte au début du
-cycle. Le socle de fiabilité et les lots interactifs jusqu'à I3 sont intégrés.
+Base vérifiée : `a59d3cf`, PR 1 à 11 fusionnées, aucune PR ouverte au début du
+cycle. Le socle de fiabilité et les lots interactifs jusqu'à I4 sont intégrés.
 
-## Lot en cours : I4 — Export contextuel de la version sélectionnée
+## Lot en cours : I5 — Filtres des séances de la version sélectionnée
 
-Diagnostic confirmé : l'Historique cible déjà une version précise, mais ne permettait
-pas de télécharger cette version. L'export existant n'était accessible que dans le
-parcours d'import/correction.
+Diagnostic confirmé : après sélection de Vn, l'Historique affichait toutes ses séances
+sans recherche, filtres, compteur, réinitialisation ni état zéro filtré.
 
-Livrable développé : bouton « Télécharger Vn en Excel » dans les actions contextuelles,
-nom `EDT_<emploi>_Vn.xlsx`, deux feuilles existantes et état vide explicite. L'export
-d'une version archivée ne l'active pas et ne crée aucun enregistrement.
+Livrable développé : recherche texte sans distinction d'accents sur matière/enseignant/groupe/salle/horaire,
+filtres Jour/Enseignant/Groupe, compteur résultat/total, réinitialisation et état zéro.
+Les filtres restent propres à chaque Vn lors des allers-retours.
 
-Critères : V1 et V2 donnent leurs propres séances et noms ; deux feuilles présentes ;
-bouton désactivé sans séance ; sélection, versions et drapeaux actifs inchangés.
+Critères : défaut, filtres individuels/combinés, zéro et reset exacts ; état V1/V2
+isolé ; Excel complet, SQLite et drapeau actif inchangés.
 
-État : 13 tests ciblés puis 65 tests et 15 sous-tests réussis. Revue indépendante
-acceptée sans blocage. AppTest couvre sélection/état vide ; lecture du classeur et snapshots
-SQLite couvrent contenu exact et absence de mutation.
+État : 17 tests ciblés puis 69 tests et 15 sous-tests réussis. Revue indépendante
+acceptée sans blocage après vérification Unicode. AppTest couvre les transitions ; les feuilles Excel et snapshots SQLite
+couvrent l'absence de mutation fonctionnelle.
 
 ## Suite
 
